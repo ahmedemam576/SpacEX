@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader
 class Contracting_Block(nn.Module):
     def __init__(self,input_channels, kernel_size =3 ,use_inorm = True, activation = 'relu'):
         super(Contracting_Block,self).__init__()
-        self.conv = nn.Conv2d(input_channels, input_channels*2, kernel_size = 3, stride= 2, padding=1, padding_mode= 'reflect')
+        self.conv = nn.Conv2d(input_channels, input_channels*2, kernel_size = Kernel_size, stride= 2, padding=1, padding_mode= 'reflect')
         self.use_inorm = use_inorm
         self.activation = nn.ReLU() if activation == 'relu' else nn.LeakyReLU(0.2)
         if use_inorm:
