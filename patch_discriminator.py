@@ -20,6 +20,22 @@ class Patch_Discriminator(nn.Module):
         self.contracting2 = Contracting_Block(hidden_channels*2, kernel_size=4,activation='leaky_relu')
         self.contracting3= Contracting_Block(hidden_channels*4, kernel_size=4, activation='leaky_relu')
         self.finalConv = nn.Conv2d(hidden_channels*8, 1, kernel_size = 1)
+        self.init_weights()
+     
+        
+    # initialize the parmaters weights 
+    def init_weights(self):
+        
+        for m in self.modules():
+            
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
+                torch.nn.init.normal_(m.weight, 0.0, 0.0)
+            if isinstance(m, nn.BatchNorm2d):
+                torch.nn.init.normal_(m.weight, 0.0, 0.0)
+                torch.nn.init.constant_(m.bias, 0)
+            if isinstance(m, nn.InstanceNorm2d):
+                torch.nn.init.normal_(m.weight, 0.0, 0.0)
+                torch.nn.init.constant_(m.bias, 0)
         
     def Forward(self, x):
         x= self.upfeature(x)

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+ #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Fri Aug  5 16:09:09 2022
@@ -46,6 +46,24 @@ class Generator(nn.Module):
         
         self.down_feature = Feature_map(hidden_channels, output_channels)
         self.tanh = nn.Tanh()
+        self.init_weights()
+        
+        
+    # initialize the parmaters weights    
+    def init_weights(self):
+        
+        for m in self.modules():
+            
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
+                torch.nn.init.normal_(m.weight, 0.0, 0.0)
+            if isinstance(m, nn.BatchNorm2d):
+                torch.nn.init.normal_(m.weight, 0.0, 0.0)
+                torch.nn.init.constant_(m.bias, 0)
+            if isinstance(m, nn.InstanceNorm2d):
+                torch.nn.init.normal_(m.weight, 0.0, 0.0)
+                torch.nn.init.constant_(m.bias, 0)
+                
+                
         
     def Forward(self, x):
         x= self.up_feature(x)
