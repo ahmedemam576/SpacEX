@@ -5,11 +5,12 @@ Created on Tue Aug  9 10:53:03 2022
 
 @author: ahmedemam576
 """
-import torch
+from torch.nn  import L1Loss, MSELoss
 class Gan_loss_term:
     '''
     define the main building blocks used in many loss terms
     which is used commonly in GANs application
+    ----> a constructor for other GANs loss functions
     '''
     def __init__ (self, generator_out, discriminator_out, name, weight =1, norm= 'l2',):
         
@@ -19,9 +20,9 @@ class Gan_loss_term:
         self. discriminator_out = discriminator_out
         
         if norm == 'l2':
-            self.norm = torch.nn.MSELoss()
+            self.norm = MSELoss()
         elif norm =='l1':
-            self.norm = torch.nn.L1Loss()
+            self.norm = L1Loss()
         else:
             self.norm =norm # for other norms
         
