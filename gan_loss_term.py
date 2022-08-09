@@ -12,13 +12,12 @@ class Gan_loss_term:
     which is used commonly in GANs application
     ----> a constructor for other GANs loss functions
     '''
-    def __init__ (self, real_x,fake_x, generator, discriminator, name, norm= 'l2',weight =1.0):
+    def __init__ (self, real_x, generator, discriminator, name, norm= 'l2',weight =1.0):
         
         self.weight = weight
         self.name  = name
         self. generator = generator
         self. discriminator = discriminator
-        self.fake_x = fake_x
         self.real_x = real_x
         print(f'{self.name} is created')
         if norm == 'l2':
