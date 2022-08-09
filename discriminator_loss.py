@@ -26,10 +26,10 @@ class Discriminator_loss():
         
         
     def __call__(self, weight):    
-        disc_fake_x = disc_X(fake_X.detach()) # detach the generator, not to optimize the generator by the disc. objective function
-        disc_fake_loss = loss_type(disc_fake_loss, torch.zeros_like(disc_fake_loss))
-        disc_real_x = disc_X(real_X)
-        disc_real_loss = loss_type(disc_real_loss, torch.ones_like(disc_real_loss))
+        disc_fake_x = self.disc_X(self.fake_X.detach()) # detach the generator, not to optimize the generator by the disc. objective function
+        disc_fake_loss = self.loss_type(disc_fake_x, torch.zeros_like(disc_fake_x))
+        disc_real_x = self.disc_X(self.real_X)
+        disc_real_loss = self.loss_type(disc_real_x, torch.ones_like(disc_real_x))
         avg_disc_loss= 0.5*(disc_fake_loss + disc_real_loss)
         
         return weight* avg_disc_loss
