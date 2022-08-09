@@ -6,5 +6,19 @@ Created on Tue Aug  9 10:43:26 2022
 @author: ahmedemam576
 """
 from gan_loss_term import Gan_loss_term
+from torch import ones_like
 
-class Adverserial_Loss(Gan_loss_term):
+class Adversarial_Loss(Gan_loss_term):
+    def __init__(self,real_x, generator, discriminator, name, norm, weight=1.0):
+        super(Adversarial_Loss,self).__init__(generator, discriminator, real_x, norm, name, weight)
+        '''
+        the class should inheret all his attributes from the Gan_loss_term
+        so we shouldn't set each attribute to .self'
+        ''' 
+        print(f'{self.name}is initiated')
+    def __call__(self):
+        fake_y_from_x =self.generator(self.real_x)
+        disced_fake_y = self.discriminator(fake_y_from_x)
+        adv_loss = self.norm(disced_fake_y, ones_like(disced_fake_y))
+        return self.weight* adv_loss
+        
