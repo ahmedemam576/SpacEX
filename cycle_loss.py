@@ -14,7 +14,7 @@ class Cycle_Loss(Gan_loss_term):
         '''
         the class should inheret all his attributes from the Gan_loss_term
         so we shouldn't set each attribute to .self
-        this loss should be used two time for opposite generators
+        this loss should be used two time for  opposite generators
         
         
         args:
