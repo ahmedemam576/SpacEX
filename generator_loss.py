@@ -25,9 +25,23 @@ class Generator_Loss(Gan_loss_term):
         fake_X =gen_YX(real_Y)
         disced_fake_X = disc_X(fake_X)
         adv_loss_X = (adv_norm(disced_fake_X, torch.ones_like(disced_fake_X)))
+        avg_adv_loss = (adv_loss_X+adv_loss_Y)/2
         
       
-        return adv_loss_Y, fake_Y, adv_loss_X, fake_X
+        return (avg_adv_loss,adv_loss_Y, adv_loss_X, fake_X, fake_Y)
         
     
-    
+    def __call__(adv_weight, id_weight, cycle_weight):
+        
+        adverserial_loss =
+        identity_loss =
+        cycle_loss=
+        
+        
+        
+        
+        
+        
+        
+        
+        adv_weight* adverserial_loss + id_weight*identity_loss+ cycle_weight* cycle_loss
