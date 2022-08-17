@@ -8,11 +8,20 @@ Created on Wed Aug  3 11:36:11 2022
 import torch
 from generator import Generator
 from patch_discriminator import Patch_Discriminator
+import glob
+import random
+import os
+from torch.utils.data import Dataset
+from PIL import Image
 
 
 class ImageDataset(Dataset):
     def __init__(self, root, transform=None, mode='train'):
         self.transform = transform
+        # glob searches for a file with specific pattern
+        # join, just concatenate two pathes, and using ('sA' % mode) will add A at the end of the root path without spaces
+        # sorted will give us the path sorted ascendingly
+        
         self.files_A = sorted(glob.glob(os.path.join(root, '%sA' % mode) + '/*.*'))
         self.files_B = sorted(glob.glob(os.path.join(root, '%sB' % mode) + '/*.*'))
         if len(self.files_A) > len(self.files_B):
