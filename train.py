@@ -43,7 +43,8 @@ class ImageDataset(Dataset):
         if index == len(self) - 1:
             self.new_perm()
         # Old versions of PyTorch didn't support normalization for different-channeled images
-        return (item_A - 0.5) * 2, (item_B - 0.5) * 2
+        '''return (item_A - 0.5) * 2, (item_B - 0.5) * 2'''
+        return item_A, item_B
 
     def __len__(self):
         return min(len(self.files_A), len(self.files_B))
