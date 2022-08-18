@@ -8,11 +8,16 @@ Created on Wed Aug  3 11:36:11 2022
 import torch
 import torchvision
 from torch import nn
-from generator import Generator
-from patch_discriminator import Patch_Discriminator
 import glob
 import random
 import os
+
+
+from generator import Generator
+from patch_discriminator import Patch_Discriminator
+from generator_loss import Generator_Loss
+from discriminator_loss import Discriminator_loss
+
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from PIL import Image
@@ -123,33 +128,60 @@ def train(save_model=False):
             # image_width = image.shape[3]
             real_A = nn.functional.interpolate(real_A, size=target_shape)
             real_B = nn.functional.interpolate(real_B, size=target_shape)
+            
+            '''nn.functional.interpolate : Down/up samples the input to either the given size or the given scale_factor
+
+            The algorithm used for interpolation is determined by mode.
+            
+            Currently temporal, spatial and volumetric sampling are supported, i.e. expected inputs are 3-D, 4-D or 5-D in shape.
+            
+            The input dimensions are interpreted in the form: mini-batch x channels x [optional depth] x [optional height] x width.
+            
+            The modes available for resizing are: nearest, linear (3D-only), bilinear, bicubic (4D-only), trilinear (5D-only), area, nearest-exact'''
+            
+            
             cur_batch_size = len(real_A)
+            
             real_A = real_A.to(device)
             real_B = real_B.to(device)
+            
+            
 
             ### Update discriminator A ###
             disc_A_opt.zero_grad() # Zero out the gradient before backpropagation
+            disc_B_opt.zero_grad() # Zero out the gradient before backpropagation
             with torch.no_grad():
                 fake_A = gen_BA(real_B)
-            disc_A_loss = get_disc_loss(real_A, fake_A, disc_A, adv_criterion)
-            disc_A_loss.backward(retain_graph=True) # Update gradients
+            
+            disc_a_loss = Discriminator_loss(real_A, fake_A, disc_A, adverserial_mse_loss)
+                
+                
+                
+            
+            disc_a_loss().backward(retain_graph=True) # Update gradients
             disc_A_opt.step() # Update optimizer
 
             ### Update discriminator B ###
-            disc_B_opt.zero_grad() # Zero out the gradient before backpropagation
+            
             with torch.no_grad():
                 fake_B = gen_AB(real_A)
-            disc_B_loss = get_disc_loss(real_B, fake_B, disc_B, adv_criterion)
-            disc_B_loss.backward(retain_graph=True) # Update gradients
+                
+            disc_b_loss = Discriminator_loss(real_B, fake_A, disc_B, adverserial_mse_loss)
+            disc_b_loss().backward(retain_graph=True) # Update gradients
             disc_B_opt.step() # Update optimizer
+            
+            
+            
+            
 
             ### Update generator ###
             gen_opt.zero_grad()
-            gen_loss, fake_A, fake_B = get_gen_loss(
-            real_A, real_B, gen_AB, gen_BA, disc_A, disc_B, adv_criterion, recon_criterion, recon_criterion
-            )
-            gen_loss.backward() # Update gradients
+            main_generator_loss = Generator_Loss(real_A, real_B, gen_AB, gen_BA, disc_A, disc_B, adverserial_mse_loss, reconstruction_absolute_diff, reconstruction_absolute_diff)
+            
+            main_generator_loss().backward() # Update gradients
             gen_opt.step() # Update optimizer
+
+
 
             # Keep track of the average discriminator loss
             mean_discriminator_loss += disc_A_loss.item() / display_step
