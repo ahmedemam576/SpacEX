@@ -101,6 +101,9 @@ reconstruction_absolute_diff= torch.nn.L1Loss()
 
 # we initialize the Generators and the discriminators
 gen_AB = Generator(a_dim, b_dim).to(device)
+
+
+
 gen_BA = Generator(b_dim, a_dim).to(device)
 disc_A = Patch_Discriminator(a_dim).to(device)
 disc_B = Patch_Discriminator(b_dim).to(device)

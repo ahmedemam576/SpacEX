@@ -53,16 +53,20 @@ class Generator(nn.Module):
     def init_weights(self):
         
         for m in self.modules():
-            
+       
+            #print(m)
             if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
-                torch.nn.init.normal_(m.weight, 0.0, 0.0)
+                print('yes conv2d')
+                torch.nn.init.xavier_normal_(m.weight)
             if isinstance(m, nn.BatchNorm2d):
                 torch.nn.init.normal_(m.weight, 0.0, 0.0)
                 torch.nn.init.constant_(m.bias, 0)
-            if isinstance(m, nn.InstanceNorm2d):
+            if isinstance(m, nn.BatchNorm2d):
+                print('yes batch norm')
+                # these is a problem here
+                print(m)
                 torch.nn.init.normal_(m.weight, 0.0, 0.0)
                 torch.nn.init.constant_(m.bias, 0)
-                
                 
         
     def Forward(self, x):
