@@ -118,7 +118,7 @@ disc_B_opt = torch.Optional.Adam(disc_B.parameters(), lr= learning_rate, betas=(
 
 def train(save_model=False):
     mean_generator_loss = 0
-    mean_discriminator_loss = 0
+    mean_discriminator_loss_a = 0
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     cur_step = 0
 
@@ -193,7 +193,7 @@ def train(save_model=False):
 
 
             # Keep track of the average discriminator loss
-            mean_discriminator_loss_a =0
+        
             mean_generator_loss =0
             mean_discriminator_loss_a += disc_a_loss.item() / display_step
             # Keep track of the average generator loss
