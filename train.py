@@ -13,6 +13,7 @@ import random
 import os
 
 
+
 from generator import Generator
 from patch_discriminator import Patch_Discriminator
 from generator_loss import Generator_Loss
@@ -23,7 +24,8 @@ from torch.utils.data import DataLoader
 from PIL import Image
 from tqdm.auto import tqdm
 from torchvision import transforms
-
+from torchvision.utils import make_grid
+import matplotlib.pyplot as plt
 
 class ImageDataset(Dataset):
     def __init__(self, root, transform=None, mode='train'):
@@ -156,10 +158,15 @@ def train(save_model=False):
             disc_a_loss = Discriminator_loss(real_A, fake_A, disc_A, adverserial_mse_loss)
                 
                 
-                
+            disc_a_loss = disc_a_loss()
             
-            disc_a_loss().backward(retain_graph=True) # Update gradients
+            disc_a_loss.backward(retain_graph=True) # Update gradients
             disc_A_opt.step() # Update optimizer
+            
+            
+            
+            
+            
 
             ### Update discriminator B ###
             
@@ -167,7 +174,8 @@ def train(save_model=False):
                 fake_B = gen_AB(real_A)
                 
             disc_b_loss = Discriminator_loss(real_B, fake_A, disc_B, adverserial_mse_loss)
-            disc_b_loss().backward(retain_graph=True) # Update gradients
+            disc_b_loss = disc_b_loss()
+            disc_b_loss.backward(retain_graph=True) # Update gradients
             disc_B_opt.step() # Update optimizer
             
             
@@ -178,23 +186,40 @@ def train(save_model=False):
             gen_opt.zero_grad()
             main_generator_loss = Generator_Loss(real_A, real_B, gen_AB, gen_BA, disc_A, disc_B, adverserial_mse_loss, reconstruction_absolute_diff, reconstruction_absolute_diff)
             
-            main_generator_loss().backward() # Update gradients
+            main_generator_loss =main_generator_loss()
+            main_generator_loss.backward() # Update gradients
             gen_opt.step() # Update optimizer
 
 
 
             # Keep track of the average discriminator loss
-            mean_discriminator_loss += disc_A_loss.item() / display_step
+            mean_discriminator_loss_a =0
+            mean_generator_loss =0
+            mean_discriminator_loss_a += disc_a_loss.item() / display_step
             # Keep track of the average generator loss
-            mean_generator_loss += gen_loss.item() / display_step
+            mean_generator_loss += main_generator_loss.item() / display_step
 
             ### Visualization code ###
             if cur_step % display_step == 0:
-                print(f"Epoch {epoch}: Step {cur_step}: Generator (U-Net) loss: {mean_generator_loss}, Discriminator loss: {mean_discriminator_loss}")
+                print(f"Epoch {epoch}: Step {cur_step}: Generator (U-Net) loss: {mean_generator_loss}, Discriminator _a_ loss: {mean_discriminator_loss_a}")
+                
+                
+                def show_tensor_images(image_tensor, num_images=25, size=(1, 28, 28)):
+                    '''
+                    Function for visualizing images: Given a tensor of images, number of images, and
+                    size per image, plots and prints the images in an uniform grid.
+                    '''
+                    image_tensor = (image_tensor + 1) / 2
+                    image_shifted = image_tensor
+                    image_unflat = image_shifted.detach().cpu().view(-1, *size)
+                    image_grid = make_grid(image_unflat[:num_images], nrow=5)
+                    plt.imshow(image_grid.permute(1, 2, 0).squeeze())
+                    plt.show()
+                    
                 show_tensor_images(torch.cat([real_A, real_B]), size=(dim_A, target_shape, target_shape))
                 show_tensor_images(torch.cat([fake_B, fake_A]), size=(dim_B, target_shape, target_shape))
                 mean_generator_loss = 0
-                mean_discriminator_loss = 0
+                mean_discriminator_loss_a = 0
                 # You can change save_model to True if you'd like to save the model
                 if save_model:
                     torch.save({
