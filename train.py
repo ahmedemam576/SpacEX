@@ -108,9 +108,9 @@ gen_BA = Generator(b_dim, a_dim).to(device)
 disc_A = Patch_Discriminator(a_dim).to(device)
 disc_B = Patch_Discriminator(b_dim).to(device)
 
-gen_opt = torch.optim.Adam(list(gen_AB.parameters())+gen_BA.parameters(), lr=learning_rate, betas=(0.5,0.999))
+gen_opt = torch.optim.Adam(list(gen_AB.parameters())+list(gen_BA.parameters()), lr=learning_rate, betas=(0.5,0.999))
 disc_A_opt = torch.optim.Adam(disc_A.parameters(), lr=learning_rate, betas=(0.5,0.999))
-disc_B_opt = torch.Optional.Adam(disc_B.parameters(), lr= learning_rate, betas=(0.5,0.999))
+disc_B_opt = torch.optim.Adam(disc_B.parameters(), lr= learning_rate, betas=(0.5,0.999))
 
 
 

@@ -69,7 +69,7 @@ class Generator(nn.Module):
                 torch.nn.init.constant_(m.bias, 0)
                 
         
-    def Forward(self, x):
+    def forward(self, x):
         x= self.up_feature(x)
         x= self.contract1(x)
         x= self.contract2(x)
