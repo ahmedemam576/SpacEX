@@ -15,16 +15,21 @@ class Expanding_Block(nn.Module):
         
         super(Expanding_Block, self).__init__()
         self.tconv = nn.ConvTranspose2d(input_channels, input_channels//2, kernel_size, stride=2, padding= 1,output_padding=1)
-        self.activation = nn.ReLU() if activation == 'relu' else nn.LeakyReLU(0.2)#
+        self.activation = activation
+        self.use_inorm = use_inorm
         if use_inorm:
             self.inorm = nn.InstanceNorm2d(input_channels//2)
         
-        def forward(self,x):
-            x= self.tconv(x)
-            if use_inorm:
-                x= self.inorm(x)
-            x=self.activation(x)
-            return(x)
+    def forward(self,x):
+        x= self.tconv(x)
+        if self.use_inorm:
+            x= self.inorm(x)
+        if self.activation == 'relu':
+            x= nn.functional.relu(x)
+        elif self.activation == 'leakyrelu':
+            x= nn.functional.leakyrelu(x,0.2)
+        
+        return(x)
     
     
     

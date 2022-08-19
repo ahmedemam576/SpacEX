@@ -25,7 +25,6 @@ class Gan_loss_term:
         self. identity_norm= identity_norm
         self.cycle_norm = cycle_norm
         
-        print(f'{self.name} is created')
         
         
             

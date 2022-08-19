@@ -32,7 +32,7 @@ class Patch_Discriminator(nn.Module):
                 torch.nn.init.normal_(m.weight, 0.0, 0.0)
             
         
-    def Forward(self, x):
+    def forward(self, x):
         x= self.upfeature(x)
         x=self.contracting1(x)
         x= self.contracting2(x)

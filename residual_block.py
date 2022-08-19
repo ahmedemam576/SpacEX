@@ -18,6 +18,7 @@ class Residual_Block(nn.Module):
         self.conv2= nn.Conv2d(input_channels, input_channels, kernel_size,padding=1, padding_mode='reflect')
         if use_inorm:
             self.innorm = nn.InstanceNorm2d(input_channels)
+        self.activation = activation
         
         
     def forward(self, x):

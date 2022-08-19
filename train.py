@@ -125,10 +125,10 @@ def train(save_model=False):
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     cur_step = 0
 
-    for epoch in range(n_epochs):
+    for epoch in  tqdm(range(n_epochs)):
         # Dataloader returns the batches
         # for image, _ in tqdm(dataloader):
-        for real_A, real_B in tqdm(dataloader):
+        for real_A, real_B in dataloader:
             
             # image_width = image.shape[3]
             real_A = nn.functional.interpolate(real_A, size=target_shape)
@@ -187,9 +187,10 @@ def train(save_model=False):
 
             ### Update generator ###
             gen_opt.zero_grad()
-            main_generator_loss = Generator_Loss(real_A, real_B, gen_AB, gen_BA, disc_A, disc_B, adverserial_mse_loss, reconstruction_absolute_diff, reconstruction_absolute_diff)
+            main_generator_loss = Generator_Loss(real_X=real_A, real_Y=real_B,gen_XY= gen_AB, gen_YX=gen_BA,disc_X= disc_A, disc_Y=disc_B,adv_norm= adverserial_mse_loss,identity_norm= reconstruction_absolute_diff,cycle_norm= reconstruction_absolute_diff)
             
             main_generator_loss =main_generator_loss()
+            #print('main_generator_loss----------------->',main_generator_loss.type)
             main_generator_loss.backward() # Update gradients
             gen_opt.step() # Update optimizer
 
