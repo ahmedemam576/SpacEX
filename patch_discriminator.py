@@ -30,12 +30,7 @@ class Patch_Discriminator(nn.Module):
             
             if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
                 torch.nn.init.normal_(m.weight, 0.0, 0.0)
-            if isinstance(m, nn.BatchNorm2d):
-                torch.nn.init.normal_(m.weight, 0.0, 0.0)
-                torch.nn.init.constant_(m.bias, 0)
-            if isinstance(m, nn.InstanceNorm2d):
-                torch.nn.init.normal_(m.weight, 0.0, 0.0)
-                torch.nn.init.constant_(m.bias, 0)
+            
         
     def Forward(self, x):
         x= self.upfeature(x)
