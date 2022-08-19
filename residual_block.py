@@ -18,12 +18,18 @@ class Residual_Block(nn.Module):
         self.conv2= nn.Conv2d(input_channels, input_channels, kernel_size,padding=1, padding_mode='reflect')
         if use_inorm:
             self.innorm = nn.InstanceNorm2d(input_channels)
-        self.activation = nn.ReLU if activation =='relu'else nn.LeakyReLU(0.2)
+        
+        
     def forward(self, x):
         x_original = x.clone()
         x= self.conv1(x)
         x= self.innorm(x)
-        x= self.activation(x)
+        
+        if self.activation == 'relu':
+            x= nn.functional.relu(x)
+        elif self.activation == 'leakyrelu':
+            x= nn.functional.leakyrelu(x,0.2)
+            
         x= self.conv2(x)
         x= self.innorm(x)
         return x_original + x
