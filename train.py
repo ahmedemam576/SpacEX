@@ -37,9 +37,10 @@ model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1).to('cuda')
 
 def layer_hook(act_dict, layer_name):
     def hook(module, input, output):
-        act_dict[layer_name] = output
+        act_dict[0] = output
     return hook
-model.fc.register_forward_hook(layer_hook(dict, 'fc'))
+activation_dictionary = dict()
+model.fc.register_forward_hook(layer_hook(activation_dictionary, 'fc'))
 
 
 
@@ -168,9 +169,11 @@ def train(save_model=False):
             real_A = real_A.to(device)
             real_B = real_B.to(device)
             
-            model(real_A)
-            activation =model.fc[1]
-            print(activation)
+            with torch.no_grad():
+                
+                outputs =model(real_A)
+                activation = activation_dictionary[0][0][0]  #the first neuron in the linear layer
+                print(activation)
 
             ### Update discriminator A ###
             disc_A_opt.zero_grad() # Zero out the gradient before backpropagation
@@ -207,7 +210,8 @@ def train(save_model=False):
 
             ### Update generator ###
             gen_opt.zero_grad()
-            main_generator_loss = Generator_Loss(real_X=real_A, real_Y=real_B,gen_XY= gen_AB, gen_YX=gen_BA,disc_X= disc_A, disc_Y=disc_B,adv_norm= adverserial_mse_loss,identity_norm= reconstruction_absolute_diff,cycle_norm= reconstruction_absolute_diff)
+            main_generator_loss = Generator_Loss(real_X=real_A, real_Y=real_B,gen_XY= gen_AB, gen_YX=gen_BA,disc_X= disc_A,
+            disc_Y=disc_B,adv_norm= adverserial_mse_loss,identity_norm= reconstruction_absolute_diff,cycle_norm= reconstruction_absolute_diff, hook_dict= activation_dictionary)
             
             main_generator_loss =main_generator_loss()
             #print('main_generator_loss----------------->',main_generator_loss.type)
