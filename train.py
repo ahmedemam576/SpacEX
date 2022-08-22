@@ -13,7 +13,7 @@ import random
 import os
 
 
-
+import torch
 from generator import Generator
 from patch_discriminator import Patch_Discriminator
 from generator_loss import Generator_Loss
@@ -26,6 +26,23 @@ from tqdm.auto import tqdm
 from torchvision import transforms
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
+
+from torchvision.models import resnet50, ResNet50_Weights
+
+# Using pretrained weights:
+resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
+resnet50(weights="IMAGENET1K_V1")
+
+model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1).to('cuda')
+
+def layer_hook(act_dict, layer_name):
+    def hook(module, input, output):
+        act_dict[layer_name] = output
+    return hook
+model.fc.register_forward_hook(layer_hook(dict, 'fc'))
+
+
+
 
 class ImageDataset(Dataset):
     def __init__(self, root, transform=None, mode='train'):
@@ -66,7 +83,7 @@ class ImageDataset(Dataset):
 adv_criterion = nn.MSELoss() 
 recon_criterion = nn.L1Loss() 
 
-n_epochs = 20
+n_epochs = 3
 dim_A = 3
 dim_B = 3
 display_step = 200
@@ -133,6 +150,7 @@ def train(save_model=False):
             # image_width = image.shape[3]
             real_A = nn.functional.interpolate(real_A, size=target_shape)
             real_B = nn.functional.interpolate(real_B, size=target_shape)
+             
             
             '''nn.functional.interpolate : Down/up samples the input to either the given size or the given scale_factor
 
@@ -150,7 +168,9 @@ def train(save_model=False):
             real_A = real_A.to(device)
             real_B = real_B.to(device)
             
-            
+            model(real_A)
+            activation =model.fc[1]
+            print(activation)
 
             ### Update discriminator A ###
             disc_A_opt.zero_grad() # Zero out the gradient before backpropagation
