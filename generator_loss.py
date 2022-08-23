@@ -20,13 +20,13 @@ class Generator_Loss(Gan_loss_term):
         #print('fake_y calculated')
         self.sum_identity_loss = self.identity_loss(self.real_X, self.real_Y, self.gen_XY, self.gen_YX)
         self.sum_cycle_loss = self.cycle_loss(self.real_X, self.real_Y, self.gen_XY, gen_YX)
-        self.sum_adv_loss = self.AM_loss()
+   
         
         self.adverserial_loss(real_X, real_Y, gen_XY, gen_YX, disc_X, disc_Y)
         #print('adv inited-----------')
         self.identity_loss(real_X, real_Y, gen_XY, gen_YX)
         self.cycle_loss(real_X, real_Y, gen_XY, gen_YX)
-        self.sum_am_loss =self.AM_loss()
+        '''   self.sum_am_loss =self.AM_loss()'''
         
         
         
@@ -77,10 +77,10 @@ class Generator_Loss(Gan_loss_term):
         return sum_cycle_loss
     
     
-    def AM_loss(self):
+    ''' def AM_loss(self):
         activation = self.hook_dict[0][0][0]
         sum_am_loss =self.identity_norm(activation, torch.ones_like(activation))
-        return sum_am_loss
+        return sum_am_loss'''
     
     def __call__(self, adv_weight=1, id_weight=1, cycle_weight=1):
         
