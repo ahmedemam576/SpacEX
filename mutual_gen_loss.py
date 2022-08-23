@@ -14,12 +14,12 @@ Created on Tue Aug 23 10:30:36 2022
 
 """
 import torch
-from torch.nn  import L1Loss, MSELoss
+
 from gan_loss_term import Gan_loss_term
 
 class Generator_Loss(Gan_loss_term):
     def __init__(self, real_X, gen_max, gen_min, disc_min, disc_max, adv_norm, identity_norm, cycle_norm, hook_dict):
-        super(Generator_Loss,self).__init__(real_X, gen_max, gen_min, disc_min, disc_max, adv_norm, identity_norm, cycle_norm)
+        
         
         self.hook_dict = hook_dict
         self.sum_adv_loss,_, _, maxed_x, mined_x= self.adverserial_loss(self.real_X, self.gen_max, self.gen_min, self.disc_min, self.disc_max)
