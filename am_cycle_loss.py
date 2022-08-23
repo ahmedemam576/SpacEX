@@ -73,13 +73,20 @@ class Generator_Loss(Gan_loss_term):
    #' we use the adverserial_loss function to get the fake_x and fake_y used in the cycle loss'
     
     
-    def cycle_loss(self, real_X,real_Y, gen_XY,gen_YX):
+    def cycle_loss(self, real_X, maxed_x,mined_x, gen_min,gen_max):
+        ''' 
+        we try to force this function  gen_max(gen_min(x)) =====> x
+        therefore by minimizing -> (gen_max(gen_min(x)) - x) , we create a cycle
+        '''
         
-        fake_y= self.fake_Y
-        cycle_XY = self.cycle_norm(real_X, fake_y)
-        fake_x = self.fake_X
-        cycle_YX = self.cycle_norm(fake_x, real_X)
-        sum_cycle_loss = cycle_XY+cycle_YX
+        neutralized_maxed_x = gen_min(maxed_x)
+        cycle_max = self.cycle_norm(real_X, neutralized_maxed_x)
+        
+        
+        neutralized_mined_x = gen_max(mined_x)
+        cycle_min = self.cycle_norm(neutralized_mined_x, real_X)
+        
+        sum_cycle_loss = cycle_max+cycle_min
         return sum_cycle_loss
     
     
