@@ -84,7 +84,7 @@ class ImageDataset(Dataset):
 adv_criterion = nn.MSELoss() 
 recon_criterion = nn.L1Loss() 
 
-n_epochs = 3
+n_epochs = 5
 dim_A = 3
 dim_B = 3
 display_step = 200
@@ -172,8 +172,8 @@ def train(save_model=False):
             with torch.no_grad():
                 
                 outputs =model(real_A)
-                activation = activation_dictionary[0][0][0]  #the first neuron in the linear layer
-                print(activation)
+                #activation = activation_dictionary[0][0][0]  #the first neuron in the linear layer
+                #print(activation)
 
             ### Update discriminator A ###
             disc_A_opt.zero_grad() # Zero out the gradient before backpropagation

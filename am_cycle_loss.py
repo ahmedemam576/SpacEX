@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Wed Aug  3 11:35:22 2022
+Created on Tue Aug 23 10:30:36 2022
 
 @author: ahmedemam576
+"""
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+
 
 
 """
@@ -12,8 +18,8 @@ from torch.nn  import L1Loss, MSELoss
 from gan_loss_term import Gan_loss_term
 
 class Generator_Loss(Gan_loss_term):
-    def __init__(self, real_X, real_Y, gen_XY, gen_YX, disc_X, disc_Y, adv_norm, identity_norm, cycle_norm, hook_dict):
-        super(Generator_Loss,self).__init__(real_X, real_Y, gen_XY, gen_YX, disc_X, disc_Y, adv_norm, identity_norm, cycle_norm)
+    def __init__(self, real_X, gen_max, gen_min, disc_min, disc_max, adv_norm, identity_norm, cycle_norm, hook_dict):
+        super(Generator_Loss,self).__init__(real_X, gen_max, gen_min, disc_min, disc_max, adv_norm, identity_norm, cycle_norm)
         
         self.hook_dict = hook_dict
         self.sum_adv_loss, _, _ , self.fake_X, self.fake_Y= self.adverserial_loss(self.real_X, self.real_Y, self.gen_XY, self.gen_YX, self.disc_X, self.disc_Y)
@@ -34,19 +40,20 @@ class Generator_Loss(Gan_loss_term):
         
         
     
-    def adverserial_loss(self, real_X, real_Y,gen_XY, gen_YX, disc_X, disc_Y):
+    def adverserial_loss(self, real_X, gen_max, gen_min, disc_min, disc_max):
         
-        fake_Y =gen_XY(real_X)
-        disced_fake_y = disc_Y(fake_Y)
-        adv_loss_Y = (self.adv_norm(disced_fake_y, torch.ones_like(disced_fake_y)))
+        maxed_x =gen_max(real_X)
+        disced_maxed_x = disc_max(maxed_x)
+        adv_loss_max = (self.adv_norm(disced_maxed_x, torch.ones_like(disced_maxed_x)))
         
-        fake_X =gen_YX(real_Y)
-        disced_fake_X = disc_X(fake_X)
-        adv_loss_X = (self.adv_norm(disced_fake_X, torch.ones_like(disced_fake_X)))
-        sum_adv_loss = (adv_loss_X+adv_loss_Y)
+        mined_x =gen_min(real_X)
+        disced_mined_x = disc_min(mined_x)
+        adv_loss_min = (self.adv_norm(disced_mined_x, torch.ones_like(disced_mined_x)))
+        
+        sum_adv_loss = (adv_loss_max+adv_loss_min)
         
       
-        return (sum_adv_loss,adv_loss_Y, adv_loss_X, fake_X, fake_Y)
+        return (sum_adv_loss,adv_loss_max, adv_loss_min, maxed_x, mined_x)
     
     
     
@@ -54,8 +61,8 @@ class Generator_Loss(Gan_loss_term):
     def identity_loss(self, real_X,real_Y, gen_XY, gen_YX):
         id_x = gen_YX(real_X)
         id_loss_x = self.identity_norm(id_x, real_X)
-        id_y = gen_XY(real_Y)
-        id_loss_y = self.identity_norm(id_y, real_Y)
+        id_y = gen_XY(real_X)
+        id_loss_y = self.identity_norm(id_y, real_X)
         sum_id_loss = id_loss_x+id_loss_y
         return sum_id_loss
     
@@ -67,7 +74,7 @@ class Generator_Loss(Gan_loss_term):
     def cycle_loss(self, real_X,real_Y, gen_XY,gen_YX):
         
         fake_y= self.fake_Y
-        cycle_XY = self.cycle_norm(real_Y, fake_y)
+        cycle_XY = self.cycle_norm(real_X, fake_y)
         fake_x = self.fake_X
         cycle_YX = self.cycle_norm(fake_x, real_X)
         sum_cycle_loss = cycle_XY+cycle_YX
