@@ -123,6 +123,10 @@ gen_AB = Generator(a_dim, b_dim).to(device)
 
 
 gen_BA = Generator(b_dim, a_dim).to(device)
+
+
+
+
 disc_A = Patch_Discriminator(a_dim).to(device)
 disc_B = Patch_Discriminator(b_dim).to(device)
 
@@ -146,6 +150,8 @@ def train(save_model=False):
     for epoch in  tqdm(range(n_epochs)):
         # Dataloader returns the batches
         # for image, _ in tqdm(dataloader):
+            
+            ''''hat8yr fel dataloader b7es ytl3 sora wa7da bs'''
         for real_A, real_B in dataloader:
             
             # image_width = image.shape[3]
@@ -176,6 +182,12 @@ def train(save_model=False):
                 #print(activation)
 
             ### Update discriminator A ###
+            
+            '''
+            lazm tl3b fel discriminators
+            wel discriminator optimizer
+            wel discriminator loss'''
+            
             disc_A_opt.zero_grad() # Zero out the gradient before backpropagation
             disc_B_opt.zero_grad() # Zero out the gradient before backpropagation
             with torch.no_grad():
@@ -209,6 +221,10 @@ def train(save_model=False):
             
 
             ### Update generator ###
+            ''' hat8yr l generator 
+            wel generator optimizer
+            wel generator loss'''
+            
             gen_opt.zero_grad()
             main_generator_loss = Generator_Loss(real_X=real_A, real_Y=real_B,gen_XY= gen_AB, gen_YX=gen_BA,disc_X= disc_A,
             disc_Y=disc_B,adv_norm= adverserial_mse_loss,identity_norm= reconstruction_absolute_diff,cycle_norm= reconstruction_absolute_diff, hook_dict= activation_dictionary)

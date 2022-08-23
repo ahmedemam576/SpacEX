@@ -13,9 +13,9 @@ from mutual_gen_loss import Mutual_Generator_Loss
 
 
 
-class Mutual_Generator_Loss(Mutual_Generator_Loss):
+class Min_Generator_Loss(Mutual_Generator_Loss):
     def __init__(self, real_X, gen_max, gen_min, disc_min, disc_max, adv_norm, identity_norm, cycle_norm, hook_dict):
-        super(Mutual_Generator_Loss,self).__init__(self, real_X, adv_norm, identity_norm, cycle_norm)
+        super(Min_Generator_Loss,self).__init__(self, real_X, adv_norm, identity_norm, cycle_norm)
 
         
         
