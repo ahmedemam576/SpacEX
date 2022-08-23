@@ -19,7 +19,7 @@ from gan_loss_term import Gan_loss_term
 
 class Mutual_Generator_Loss(Gan_loss_term):
     def __init__(self, real_X, gen_max, gen_min, disc_min, disc_max, adv_norm, identity_norm, cycle_norm, hook_dict):
-        super(Generator_Loss,self).__init__(self, adv_norm, identity_norm, cycle_norm)
+        super(Mutual_Generator_Loss,self).__init__(self, adv_norm, identity_norm, cycle_norm)
         self.hook_dict = hook_dict
         
         self.real_X,self.gen_max, self.gen_min, self.disc_min, self.disc_max = real_X, gen_max, gen_min, disc_min, disc_max
