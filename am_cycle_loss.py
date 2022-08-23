@@ -22,19 +22,24 @@ class Generator_Loss(Gan_loss_term):
         super(Generator_Loss,self).__init__(real_X, gen_max, gen_min, disc_min, disc_max, adv_norm, identity_norm, cycle_norm)
         
         self.hook_dict = hook_dict
-        self.sum_adv_loss, _, _ , self.fake_X, self.fake_Y= self.adverserial_loss(self.real_X, self.real_Y, self.gen_XY, self.gen_YX, self.disc_X, self.disc_Y)
-        #print('fake_y calculated')
-        self.sum_identity_loss = self.identity_loss(self.real_X, self.real_Y, self.gen_XY, self.gen_YX)
-        self.sum_cycle_loss = self.cycle_loss(self.real_X, self.real_Y, self.gen_XY, gen_YX)
-        self.sum_adv_loss = self.AM_loss()
+        self.sum_adv_loss,_, _, maxed_x, mined_x= self.adverserial_loss(self.real_X, self.gen_max, self.gen_min, self.disc_min, self.disc_max)
         
-        self.adverserial_loss(real_X, real_Y, gen_XY, gen_YX, disc_X, disc_Y)
+        self.sum_identity_loss = self.identity_loss(self.maxed_x, self.mined_x, self.gen_max, self.gen_min)
+        
+        self.sum_cycle_loss = self.cycle_loss(self.real_X, self.maxed_x,self.mined_x, self.gen_min, self.gen_max)
+        
+        self.sum_actmax_loss =self.Act_max()
+        self.sum_actmin_loss =self.Act_min()
+        
+        
+        self.adverserial_loss(real_X, gen_max, gen_min, disc_min, disc_max)
         #print('adv inited-----------')
-        self.identity_loss(real_X, real_Y, gen_XY, gen_YX)
-        self.cycle_loss(real_X, real_Y, gen_XY, gen_YX)
-        self.sum_am_loss =self.AM_loss()
+        self.identity_loss( maxed_x, mined_x, gen_max, gen_min)
         
+        self.cycle_loss(real_X, maxed_x,mined_x, gen_min,gen_max)
         
+        self.Act_max()
+        self.Act_min()
         
         
         
@@ -51,8 +56,6 @@ class Generator_Loss(Gan_loss_term):
         adv_loss_min = (self.adv_norm(disced_mined_x, torch.ones_like(disced_mined_x)))
         
         sum_adv_loss = (adv_loss_max+adv_loss_min)
-        
-      
         return (sum_adv_loss,adv_loss_max, adv_loss_min, maxed_x, mined_x)
     
     
@@ -90,14 +93,20 @@ class Generator_Loss(Gan_loss_term):
         return sum_cycle_loss
     
     
-    def AM_loss(self):
+    def Act_max(self):
         activation = self.hook_dict[0][0][0]
-        sum_am_loss =self.identity_norm(activation, torch.ones_like(activation))
-        return sum_am_loss
+        sum_actmax_loss =self.identity_norm(activation, torch.ones_like(activation))
+        return sum_actmax_loss
+    
+    
+    def Act_min(self):
+        activation = self.hook_dict[0][0][0]
+        sum_actmin_loss =self.identity_norm(activation, torch.zeros_like(activation))
+        return sum_actmin_loss
     
     def __call__(self, adv_weight=1, id_weight=1, cycle_weight=1):
         
-        x = (adv_weight * self.sum_adv_loss) + (id_weight * self.sum_identity_loss) + (cycle_weight * self.sum_cycle_loss) 
+        x = (adv_weight * self.sum_adv_loss) + (id_weight * self.sum_identity_loss) + (cycle_weight * self.sum_cycle_loss)+ (self.sum_actmax_loss)+(self.sum_actmin_loss)
         #print('shape of sum_adv_loss ')
         return x
                 
