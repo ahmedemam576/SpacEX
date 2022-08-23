@@ -58,12 +58,14 @@ class Generator_Loss(Gan_loss_term):
     
     
     
-    def identity_loss(self, real_X,real_Y, gen_XY, gen_YX):
-        id_x = gen_YX(real_X)
-        id_loss_x = self.identity_norm(id_x, real_X)
-        id_y = gen_XY(real_X)
-        id_loss_y = self.identity_norm(id_y, real_X)
-        sum_id_loss = id_loss_x+id_loss_y
+    def identity_loss(self, maxed_x, mined_x, gen_max, gen_min):
+        id_mined = gen_min(mined_x)
+        id_loss_min = self.identity_norm(id_mined, mined_x)
+        
+        id_maxed = gen_max(maxed_x)
+        id_loss_max = self.identity_norm(id_maxed, maxed_x)
+        
+        sum_id_loss = id_loss_max + id_loss_min
         return sum_id_loss
     
     
