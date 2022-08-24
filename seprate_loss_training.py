@@ -17,14 +17,6 @@ from torch import nn
 import glob
 import random
 import os
-
-
-
-from generator import Generator
-from patch_discriminator import Patch_Discriminator
-from generator_loss import Generator_Loss
-from discriminator_loss import Discriminator_loss
-
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from PIL import Image
@@ -32,6 +24,15 @@ from tqdm.auto import tqdm
 from torchvision import transforms
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
+
+# importing the framework's buildng blocks 
+from generator import Generator
+from patch_discriminator import Patch_Discriminator
+from gen_min_loss import  Min_Generator_Loss
+from gen_max_loss import Max_Generator_Loss     # ' separtate gen. losses'
+from discriminator_loss import Discriminator_loss
+
+
 
 from torchvision.models import resnet50, ResNet50_Weights
 
@@ -45,8 +46,8 @@ def layer_hook(act_dict, layer_name):
     def hook(module, input, output):
         act_dict[layer_name] = output
     return hook
-activation_dictionary = dict()
-model.fc.register_forward_hook(layer_hook(activation_dictionary, 'fc'))
+hook_dict = dict()
+model.fc.register_forward_hook(layer_hook(hook_dict, 'fc'))
 
 
 ''' change the dataloader to be able to produce only zebras'''
@@ -86,8 +87,9 @@ class ImageDataset(Dataset):
     def __len__(self):
         return min(len(self.files_A), len(self.files_B))
 
-adv_criterion = nn.MSELoss() 
-recon_criterion = nn.L1Loss() 
+adv_norm = nn.MSELoss() 
+identity_norm = nn.L1Loss() 
+cycle_norm =nn.L1Loss() 
 
 n_epochs = 5
 dim_A = 3
@@ -212,7 +214,7 @@ def train(save_model=False):
             with torch.no_grad():
                 mined_x = gen_min(real_A)
             
-            disc_min_loss = Discriminator_loss(real_A, mined_x, disc_min, adverserial_mse_loss)         
+            disc_min_loss = Discriminator_loss(real_A, mined_x, disc_min, adv_norm)         
             disc_min_loss = disc_min_loss()
             
             disc_min_loss.backward(retain_graph=True) # Update gradients
@@ -225,7 +227,7 @@ def train(save_model=False):
             with torch.no_grad():
                 maxed_x = gen_max(real_A)
                 
-            disc_max_loss = Discriminator_loss(real_A, maxed_x, disc_max, adverserial_mse_loss)
+            disc_max_loss = Discriminator_loss(real_A, maxed_x, disc_max, adv_norm)
             disc_max_loss = disc_max_loss() ' running the call method'
             disc_max_loss.backward(retain_graph=True) # Update gradients
             disc_max_opt.step() # Update optimizer
@@ -242,19 +244,19 @@ def train(save_model=False):
             gen_max_opt.zero_grad()
             gen_min_opt.zero_grad()
             
-            gen_max_loss =
-            gen_min_loss =
+            gen_max_loss = Max_Generator_Loss(real_A, gen_max, gen_min, disc_min, disc_max, adv_norm, identity_norm, cycle_norm, hook_dict)
+            gen_min_loss = Min_Generator_Loss(real_A, gen_max, gen_min, disc_min, disc_max, adv_norm, identity_norm, cycle_norm, hook_dict)
+            # running the call method 
+            gen_max_loss = gen_max_loss()
+            gen_min_loss = gen_min_loss()
             
+            # call the backward method
+            gen_max_loss.backward()
+            gen_min_loss.backward()
             
-            
-            
-            main_generator_loss = Generator_Loss(real_X=real_A, real_Y=real_B,gen_XY= gen_AB, gen_YX=gen_BA,disc_X= disc_A,
-            disc_Y=disc_B,adv_norm= adverserial_mse_loss,identity_norm= reconstruction_absolute_diff,cycle_norm= reconstruction_absolute_diff, hook_dict= activation_dictionary)
-            
-            main_generator_loss =main_generator_loss()
-            #print('main_generator_loss----------------->',main_generator_loss.type)
-            main_generator_loss.backward() # Update gradients
-            gen_opt.step() # Update optimizer
+            # optimizers step
+            gen_max_opt.step()
+            gen_min_opt.step() # Update optimizer
 
 
 
