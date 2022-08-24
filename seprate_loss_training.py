@@ -19,7 +19,7 @@ import random
 import os
 
 
-import torch
+
 from generator import Generator
 from patch_discriminator import Patch_Discriminator
 from generator_loss import Generator_Loss
@@ -35,15 +35,15 @@ import matplotlib.pyplot as plt
 
 from torchvision.models import resnet50, ResNet50_Weights
 
-# Using pretrained weights:
+# Using pretrained weights: we use resnett 50 pretrained classifier trained on imagenet1k dataset
 resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
 resnet50(weights="IMAGENET1K_V1")
-
 model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1).to('cuda')
 
+# registering a forward hook to the classifier to record the output of the last FC layer
 def layer_hook(act_dict, layer_name):
     def hook(module, input, output):
-        act_dict[0] = output
+        act_dict[layer_name] = output
     return hook
 activation_dictionary = dict()
 model.fc.register_forward_hook(layer_hook(activation_dictionary, 'fc'))
@@ -148,8 +148,8 @@ disc_min = Patch_Discriminator(b_dim).to(device)
 
 # setting the optimizers for the gens and discs
 
-gen_max = torch.optim.Adam(gen_max.parameters(), lr=learning_rate, betas=(0.5,0.999))
-gen_min = torch.optim.Adam(gen_min.parameters(), lr=learning_rate, betas=(0,5,0,999))
+gen_max_opt = torch.optim.Adam(gen_max.parameters(), lr=learning_rate, betas=(0.5,0.999))
+gen_min_opt = torch.optim.Adam(gen_min.parameters(), lr=learning_rate, betas=(0,5,0,999))
 
 disc_max_opt = torch.optim.Adam(disc_max.parameters(), lr=learning_rate, betas=(0.5,0.999))
 disc_min_opt = torch.optim.Adam(disc_min.parameters(), lr= learning_rate, betas=(0.5,0.999))
@@ -239,7 +239,15 @@ def train(save_model=False):
             wel generator optimizer
             wel generator loss'''
             
-            gen_opt.zero_grad()
+            gen_max_opt.zero_grad()
+            gen_min_opt.zero_grad()
+            
+            gen_max_loss =
+            gen_min_loss =
+            
+            
+            
+            
             main_generator_loss = Generator_Loss(real_X=real_A, real_Y=real_B,gen_XY= gen_AB, gen_YX=gen_BA,disc_X= disc_A,
             disc_Y=disc_B,adv_norm= adverserial_mse_loss,identity_norm= reconstruction_absolute_diff,cycle_norm= reconstruction_absolute_diff, hook_dict= activation_dictionary)
             
