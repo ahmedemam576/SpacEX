@@ -31,7 +31,7 @@ from patch_discriminator import Patch_Discriminator
 from gen_min_loss import  Min_Generator_Loss
 from gen_max_loss import Max_Generator_Loss     # ' separtate gen. losses'
 from discriminator_loss import Discriminator_loss
-
+from dataset import ZebraDataset
 
 
 from torchvision.models import resnet50, ResNet50_Weights
@@ -53,7 +53,7 @@ model.fc.register_forward_hook(layer_hook(hook_dict, 'fc'))
 ''' change the dataloader to be able to produce only zebras'''
 ''' maximize the zebras activation neuron with index value =340 in the las FC layer'''
 
-class ImageDataset(Dataset):
+'''class ImageDataset(Dataset):
     def __init__(self, root, transform=None, mode='train'):
         self.transform = transform
         # glob searches for a file with specific pattern
@@ -81,11 +81,11 @@ class ImageDataset(Dataset):
         if index == len(self) - 1:
             self.new_perm()
         # Old versions of PyTorch didn't support normalization for different-channeled images
-        '''return (item_A - 0.5) * 2, (item_B - 0.5) * 2'''
+     
         return item_A, item_B
 
     def __len__(self):
-        return min(len(self.files_A), len(self.files_B))
+        return min(len(self.files_A), len(self.files_B))'''
 
 adv_norm = nn.MSELoss() 
 identity_norm = nn.L1Loss() 
@@ -106,9 +106,12 @@ transform = transforms.Compose([
     transforms.RandomCrop(target_shape),
     transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
-])
-
-dataset = ImageDataset("horse2zebra", transform=transform)
+    transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                         std=[0.229, 0.224, 0.225])
+                                ])
+path = 'horse2zebra'
+mode= 'train'
+dataset = ZebraDataset(path, mode, transform)
 
 
 # define  training parameters
