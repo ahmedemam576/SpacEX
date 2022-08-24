@@ -9,9 +9,13 @@ from torch.utils.data import Dataset
 import glob
 import os
 from PIL import Image
+import torch
+from skimage.color import gray2rgba
+import numpy as np
+
 path = 'horse2zebra'
 mode = 'train'
-from skimage import gray2rgba
+
 
 class ZebraDataset(Dataset):
     def __init__(self, path, mode, transform):
@@ -26,8 +30,8 @@ class ZebraDataset(Dataset):
         
     def __getitem__(self, index):
         img = self.transform(Image.open(self.horse_file[index]))
-        if img.shape[0] != 3 : # if it's not RGB image
-            img = gray2rgba(img)
-            return img
+        shape = np.array(img).shape
+        
+        return img
         
         
