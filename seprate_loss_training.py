@@ -173,10 +173,11 @@ def train(save_model=False):
     cur_step = 0
 
     for epoch in  tqdm(range(n_epochs)):
+        
         # Dataloader returns the batches
         # for image, _ in tqdm(dataloader):
             
-            ''''hat8yr fel dataloader b7es ytl3 sora wa7da bs'''
+            
         for real_A in dataloader:
             
             # image_width = image.shape[3]
@@ -201,7 +202,7 @@ def train(save_model=False):
             
             model.eval() #we freeze the pretrained classifier weights 
             with torch.no_grad():
-                outputs =model(real_A)
+                model(real_A)
                 #activation = activation_dictionary[0][0][0]  #the first neuron in the linear layer
                 #print(activation)
 
@@ -210,10 +211,11 @@ def train(save_model=False):
             '''
             lazm tl3b fel discriminators
             wel discriminator optimizer
-            wel discriminator loss'''
+            wel discriminator loss
+            '''
             
-            disc_A_opt.zero_grad() # Zero out the gradient before backpropagation
-            disc_B_opt.zero_grad() # Zero out the gradient before backpropagation
+            disc_min_opt.zero_grad() # Zero out the gradient before backpropagation
+            disc_max_opt.zero_grad() # Zero out the gradient before backpropagation
             with torch.no_grad():
                 mined_x = gen_min(real_A)
             
@@ -231,7 +233,7 @@ def train(save_model=False):
                 maxed_x = gen_max(real_A)
                 
             disc_max_loss = Discriminator_loss(real_A, maxed_x, disc_max, adv_norm)
-            disc_max_loss = disc_max_loss() ' running the call method'
+            disc_max_loss = disc_max_loss() #' running the call method'
             disc_max_loss.backward(retain_graph=True) # Update gradients
             disc_max_opt.step() # Update optimizer
             
@@ -266,9 +268,9 @@ def train(save_model=False):
             # Keep track of the average discriminator loss
         
             mean_generator_loss =0
-            mean_discriminator_loss_a += disc_a_loss.item() / display_step
+            mean_discriminator_loss_a += disc_max_loss.item() / display_step
             # Keep track of the average generator loss
-            mean_generator_loss += main_generator_loss.item() / display_step
+            mean_generator_loss += gen_max_loss.item() / display_step
 
             ### Visualization code ###
             if cur_step % display_step == 0:
@@ -287,20 +289,21 @@ def train(save_model=False):
                     plt.imshow(image_grid.permute(1, 2, 0).squeeze())
                     plt.show()
                     
-                show_tensor_images(torch.cat([real_A, real_B]), size=(dim_A, target_shape, target_shape))
-                show_tensor_images(torch.cat([fake_B, fake_A]), size=(dim_B, target_shape, target_shape))
+                show_tensor_images(torch.cat([real_A, real_A]), size=(dim_A, target_shape, target_shape))
+                show_tensor_images(torch.cat([maxed_x, mined_x]), size=(dim_B, target_shape, target_shape))
                 mean_generator_loss = 0
                 mean_discriminator_loss_a = 0
                 # You can change save_model to True if you'd like to save the model
                 if save_model:
                     torch.save({
-                        'gen_AB': gen_AB.state_dict(),
-                        'gen_BA': gen_BA.state_dict(),
-                        'gen_opt': gen_opt.state_dict(),
-                        'disc_A': disc_A.state_dict(),
-                        'disc_A_opt': disc_A_opt.state_dict(),
-                        'disc_B': disc_B.state_dict(),
-                        'disc_B_opt': disc_B_opt.state_dict()
+                        'gen_max': gen_max.state_dict(),
+                        'gen_min': gen_min.state_dict(),
+                        'gen_max_opt': gen_max_opt.state_dict(),
+                        'gen_min_opt': gen_min_opt.state_dict(),
+                        'disc_min': disc_min.state_dict(),
+                        'disc_min_opt': disc_min_opt.state_dict(),
+                        'disc_max': disc_max.state_dict(),
+                        'disc_max_opt': disc_max_opt.state_dict()
                     }, f"cycleGAN_{cur_step}.pth")
             cur_step += 1
             
