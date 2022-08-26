@@ -96,7 +96,7 @@ class Min_Generator_Loss:
     
     
     
-    def __call__(self, adv_weight=1, id_weight=1, cycle_weight=1, activation_weight=2):
+    def __call__(self, adv_weight=0.4, id_weight=0.1, cycle_weight=0.3,activation_weight=0.2):
         
         x = (adv_weight * self.adv_loss_min) + (id_weight * self.id_loss_min) + (cycle_weight * self.cycle_min)+(activation_weight * self.sum_actmin_loss)
         #print('shape of sum_adv_loss ')
