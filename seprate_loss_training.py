@@ -106,8 +106,7 @@ transform = transforms.Compose([
     transforms.RandomCrop(target_shape),
     transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                         std=[0.229, 0.224, 0.225]),
+    transforms.Normalize(mean=[0.5],std = [0.25]),
     
                                 ])
 
@@ -265,9 +264,14 @@ def train(save_model=False):
             
             gen_max_opt.zero_grad()
             gen_min_opt.zero_grad()
-            
-            gen_max_loss = Max_Generator_Loss(real_A, gen_max, gen_min, disc_min, disc_max, adv_norm, identity_norm, cycle_norm, hook_dict)
-            gen_min_loss = Min_Generator_Loss(real_A, gen_max, gen_min, disc_min, disc_max, adv_norm, identity_norm, cycle_norm, hook_dict)
+            # add with torch no grad here to separate each gen from the 
+            # computational graph of the other
+            with torch.no_grad():
+                mined_x = gen_min(real_A)
+            gen_max_loss = Max_Generator_Loss(real_A, gen_max, disc_min, disc_max, adv_norm, identity_norm, cycle_norm, hook_dict, mined_x)
+            with torch.no_grad():
+                maxed_x = gen_max(real_A)
+            gen_min_loss = Min_Generator_Loss(real_A, gen_min, disc_min, disc_max, adv_norm, identity_norm, cycle_norm, hook_dict,maxed_x)
             # running the call method 
             gen_max_loss = gen_max_loss()
             gen_min_loss = gen_min_loss()

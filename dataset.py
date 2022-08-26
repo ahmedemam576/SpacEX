@@ -29,9 +29,10 @@ class ZebraDataset(Dataset):
         return len(self.horse_file)
         
     def __getitem__(self, index):
-        img = self.transform(Image.open(self.horse_file[index]))
-        if img.shape[0] != 3: 
-            img = img.repeat(3, 1, 1)
+        img = Image.open(self.horse_file[index])
+        if len(img.mode) != 3: 
+            img = img.convert('RGB')
+        img = self.transform(img)
         
         return img
         
