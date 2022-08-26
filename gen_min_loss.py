@@ -90,7 +90,7 @@ class Min_Generator_Loss:
     
     
     def Act_min(self):
-        activation = self.hook_dict['fc'][0][0]
+        activation = self.hook_dict['fc'][0][340]
         sum_actmin_loss =self.identity_norm(activation, torch.zeros_like(activation))
         return sum_actmin_loss
     

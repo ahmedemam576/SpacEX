@@ -91,11 +91,11 @@ adv_norm = nn.MSELoss()
 identity_norm = nn.L1Loss() 
 cycle_norm =nn.L1Loss() 
 
-n_epochs = 5
+n_epochs = 1000
 dim_A = 3
 dim_B = 3
 display_step = 200
-batch_size = 1
+batch_size = 4
 lr = 0.0002
 load_shape = 286
 target_shape = 256
@@ -106,7 +106,7 @@ transform = transforms.Compose([
     transforms.RandomCrop(target_shape),
     transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.5],std = [0.25]),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225]),
     
                                 ])
 
@@ -271,6 +271,7 @@ def train(save_model=False):
             gen_max_loss = Max_Generator_Loss(real_A, gen_max, disc_min, disc_max, adv_norm, identity_norm, cycle_norm, hook_dict, mined_x)
             with torch.no_grad():
                 maxed_x = gen_max(real_A)
+                #print('maxed_x shape =======>',maxed_x.shape)
             gen_min_loss = Min_Generator_Loss(real_A, gen_min, disc_min, disc_max, adv_norm, identity_norm, cycle_norm, hook_dict,maxed_x)
             # running the call method 
             gen_max_loss = gen_max_loss()
@@ -311,6 +312,7 @@ def train(save_model=False):
                     plt.show()
                     
                 show_tensor_images(torch.cat([real_A, real_A]), size=(dim_A, target_shape, target_shape))
+                print('maxed_x shape =======>',maxed_x.shape)
                 show_tensor_images(torch.cat([maxed_x, mined_x]), size=(dim_B, target_shape, target_shape))
                 mean_generator_loss = 0
                 mean_discriminator_loss_a = 0

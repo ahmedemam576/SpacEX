@@ -95,7 +95,7 @@ class Max_Generator_Loss:
     
     
     def Act_max(self):
-        activation = self.hook_dict['fc'][0][0]
+        activation = self.hook_dict['fc'][0][340]
         sum_actmax_loss =self.identity_norm(activation, torch.ones_like(activation))
         return sum_actmax_loss
     
