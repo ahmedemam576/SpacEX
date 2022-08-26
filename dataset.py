@@ -30,7 +30,8 @@ class ZebraDataset(Dataset):
         
     def __getitem__(self, index):
         img = self.transform(Image.open(self.horse_file[index]))
-        shape = np.array(img).shape
+        if img.shape[0] != 3: 
+            img = img.repeat(3, 1, 1)
         
         return img
         

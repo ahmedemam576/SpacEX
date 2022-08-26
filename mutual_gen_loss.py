@@ -15,16 +15,22 @@ Created on Tue Aug 23 10:30:36 2022
 """
 import torch
 
-from gan_loss_term import Gan_loss_term
+#from gan_loss_term import Gan_loss_term
 
-class Mutual_Generator_Loss(Gan_loss_term):
+class Mutual_Generator_Loss:
     def __init__(self, real_X, gen_max, gen_min, disc_min, disc_max, adv_norm, identity_norm, cycle_norm, hook_dict):
-        super(Mutual_Generator_Loss,self).__init__(self, real_X, adv_norm, identity_norm, cycle_norm)
-        self.hook_dict = hook_dict
+        #super().__init__(real_X, real_Y, gen_XY, gen_YX, disc_X, disc_Y,  adv_norm, identity_norm, cycle_norm)
         
+        # initiating the attributes
+        self.real_X = real_X
         self.gen_max, self.gen_min, self.disc_min, self.disc_max =  gen_max, gen_min, disc_min, disc_max
         self.hook_dict = hook_dict
-        self.sum_adv_loss,_, _, maxed_x, mined_x= self.adverserial_loss(self.real_X, self.gen_max, self.gen_min, self.disc_min, self.disc_max)
+        self.adv_norm = adv_norm
+        self.identity_norm = identity_norm
+        self.cycle_norm = cycle_norm
+        
+        
+        self.sum_adv_loss,yy, xx, maxed_x, mined_x= self.adverserial_loss(self.real_X, self.gen_max, self.gen_min, self.disc_min, self.disc_max)
         
         self.sum_identity_loss = self.identity_loss(self.maxed_x, self.mined_x, self.gen_max, self.gen_min)
         
@@ -35,9 +41,7 @@ class Mutual_Generator_Loss(Gan_loss_term):
         
         
         self.adverserial_loss(real_X, gen_max, gen_min, disc_min, disc_max)
-        #print('adv inited-----------')
         self.identity_loss( maxed_x, mined_x, gen_max, gen_min)
-        
         self.cycle_loss(real_X, maxed_x,mined_x, gen_min,gen_max)
         
         self.Act_max()

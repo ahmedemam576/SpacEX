@@ -14,18 +14,18 @@ from mutual_gen_loss import Mutual_Generator_Loss
 
 
 
-class Max_Generator_Loss(Mutual_Generator_Loss):
+class Max_Generator_Loss:
     def __init__(self, real_X, gen_max, gen_min, disc_min, disc_max, adv_norm, identity_norm, cycle_norm, hook_dict):
-        super(Max_Generator_Loss,self).__init__()
+        #super().__init__(real_X, gen_max, gen_min, disc_min, disc_max, adv_norm, identity_norm, cycle_norm, hook_dict)
      
-        
+        self.real_X= real_X
         self.gen_max, self.gen_min, self.disc_min, self.disc_max =  gen_max, gen_min, disc_min, disc_max
         self.hook_dict = hook_dict
+        self.adv_norm = adv_norm
+        self.identity_norm = identity_norm
+        self.cycle_norm = cycle_norm
         
-        
-        
-        
-        
+       
         self.adv_loss_max,self.maxed_x, self.mined_x= self.adverserial_loss(self.real_X, self.gen_max, self.gen_min, self.disc_min, self.disc_max)
         
         self.id_loss_max = self.identity_loss(self.maxed_x, self.mined_x, self.gen_max, self.gen_min)
@@ -33,8 +33,10 @@ class Max_Generator_Loss(Mutual_Generator_Loss):
         self.cycle_max = self.cycle_loss(self.real_X, self.maxed_x,self.mined_x, self.gen_min, self.gen_max)
         
         self.sum_actmax_loss =self.Act_max()
-    
         
+        
+        
+        self.Act_max()
         
         self.adverserial_loss(real_X, gen_max, gen_min, disc_min, disc_max)
         #print('adv inited-----------')
@@ -42,7 +44,8 @@ class Max_Generator_Loss(Mutual_Generator_Loss):
         
         self.cycle_loss(self.real_X, self.maxed_x,self.mined_x, self.gen_min, self.gen_max)
         
-        self.Act_max()
+        
+    
         
         
     def adverserial_loss(self, real_X, gen_max, gen_min, disc_min, disc_max):
@@ -81,7 +84,7 @@ class Max_Generator_Loss(Mutual_Generator_Loss):
     
     
     def Act_max(self):
-        activation = self.hook_dict[0][0][0]
+        activation = self.hook_dict['fc'][0][0]
         sum_actmax_loss =self.identity_norm(activation, torch.ones_like(activation))
         return sum_actmax_loss
     
