@@ -30,7 +30,7 @@ from generator import Generator
 from patch_discriminator import Patch_Discriminator
 from gen_min_loss import  Min_Generator_Loss
 from gen_max_loss import Max_Generator_Loss     # ' separtate gen. losses'
-from discriminator_loss import Discriminator_loss
+from discriminator_loss import Discriminator_loss 
 from dataset import ZebraDataset
 
 
