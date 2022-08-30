@@ -23,6 +23,7 @@ from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from PIL import Image
 from tqdm.auto import tqdm
+from tqdm import tqdm as tqdm_dataloader
 from torchvision import transforms
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
@@ -151,8 +152,8 @@ def train(save_model=False):
         # Dataloader returns the batches
         # for image, _ in tqdm(dataloader):
             
-            ''''hat8yr fel dataloader b7es ytl3 sora wa7da bs'''
-        for real_A, real_B in dataloader:
+        '''hat8yr fel dataloader b7es ytl3 sora wa7da bs'''
+        for real_A, real_B in tqdm_dataloader(dataloader, desc='current epoch', leave=False):
             
             # image_width = image.shape[3]
             real_A = nn.functional.interpolate(real_A, size=target_shape)
