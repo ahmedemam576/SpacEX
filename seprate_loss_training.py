@@ -376,7 +376,7 @@ def train(save_model=False):
                 
                 real_images = show_tensor_images(real_A, size=(dim_A, target_shape, target_shape))
                 real_images.save('real_img_step{cur_step}_epoch{epoch}.jpg')
-                
+                # we are just saving 3 images
                 wandb.log({f"maxed{epoch}{cur_step}": wandb.Image('maxed_img_step{cur_step}_epoch{epoch}.jpg')})  
                 wandb.log({f"mined{epoch}{cur_step}": wandb.Image('mined_img_step{cur_step}_epoch{epoch}.jpg')})  
                 wandb.log({f"real{epoch}{cur_step}": wandb.Image('real_img_step{cur_step}_epoch{epoch}.jpg')})  
