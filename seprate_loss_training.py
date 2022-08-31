@@ -36,7 +36,7 @@ from discriminator_loss import Discriminator_loss
 from dataset import ZebraDataset
 import wandb
 
-wandb.init(project="activation maximization Gan", entity="ahmedemam576")
+wandb.init(project="max_project", entity="remote_sens")
 
 
 from torchvision.models import resnet50, ResNet50_Weights
