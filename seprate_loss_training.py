@@ -64,12 +64,12 @@ def show_tensor_images(image, num_images=1, size=(1, 28, 28)):
     #image_tensor = (image_tensor + 1) / 2
     image_shifted = image
     image_unflat = image_shifted.detach().cpu().view(-1, *size).squeeze().numpy()
-    print(f'image size =================<{image_unflat.shape}')
+    #print(f'image size =================<{image_unflat.shape}')
     #image_grid = make_grid(image_unflat[:num_images], nrow=5)
     image_grid= image_unflat.transpose(1, 2, 0).squeeze()
     im = Image.fromarray((image_grid*255).astype(np.uint8))
     
-    print(f'image size =================<{image_unflat.shape}')
+    #print(f'image size =================<{image_unflat.shape}')
     #       image_grid.save('myimage.jpg')
 
     #plt.imshow(image_grid.permute(1, 2, 0).squeeze())
@@ -367,15 +367,19 @@ def train(save_model=False):
                     }, f"cycleGAN_{cur_step}.pth")
                     
             cur_step += 1
-            if cur_step % 100 == 0:
+            if cur_step % 1000 == 0:
                 maxed_images = show_tensor_images(maxed_x, size=(dim_A, target_shape, target_shape))
                 maxed_images.save('maxed_img_step{cur_step}_epoch{epoch}.jpg')
                 
                 mined_images = show_tensor_images(mined_x, size=(dim_A, target_shape, target_shape))
                 mined_images.save('mined_img_step{cur_step}_epoch{epoch}.jpg')
                 
+                real_images = show_tensor_images(real_A, size=(dim_A, target_shape, target_shape))
+                real_images.save('real_img_step{cur_step}_epoch{epoch}.jpg')
+                
                 wandb.log({f"maxed{epoch}{cur_step}": wandb.Image('maxed_img_step{cur_step}_epoch{epoch}.jpg')})  
                 wandb.log({f"mined{epoch}{cur_step}": wandb.Image('mined_img_step{cur_step}_epoch{epoch}.jpg')})  
+                wandb.log({f"real{epoch}{cur_step}": wandb.Image('real_img_step{cur_step}_epoch{epoch}.jpg')})  
             
 if __name__ == '__main__':
     
