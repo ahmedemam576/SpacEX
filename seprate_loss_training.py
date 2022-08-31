@@ -24,6 +24,8 @@ from tqdm.auto import tqdm
 from torchvision import transforms
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
+from torchvision.utils import make_grid
+import numpy as np
 
 # importing the framework's buildng blocks 
 from generator import Generator
@@ -32,6 +34,9 @@ from gen_min_loss import  Min_Generator_Loss
 from gen_max_loss import Max_Generator_Loss     # ' separtate gen. losses'
 from discriminator_loss import Discriminator_loss 
 from dataset import ZebraDataset
+import wandb
+
+wandb.init(project="activation maximization Gan", entity="ahmedemam576")
 
 
 from torchvision.models import resnet50, ResNet50_Weights
@@ -49,6 +54,27 @@ def layer_hook(act_dict, layer_name):
 hook_dict = dict()
 model.fc.register_forward_hook(layer_hook(hook_dict, 'fc'))
 
+
+
+def show_tensor_images(image, num_images=1, size=(1, 28, 28)):
+    '''
+    Function for visualizing images: Given a tensor of images, number of images, and
+    size per image, plots and prints the images in an uniform grid.
+    '''
+    #image_tensor = (image_tensor + 1) / 2
+    image_shifted = image
+    image_unflat = image_shifted.detach().cpu().view(-1, *size).squeeze().numpy()
+    print(f'image size =================<{image_unflat.shape}')
+    #image_grid = make_grid(image_unflat[:num_images], nrow=5)
+    image_grid= image_unflat.transpose(1, 2, 0).squeeze()
+    im = Image.fromarray((image_grid*255).astype(np.uint8))
+    
+    print(f'image size =================<{image_unflat.shape}')
+    #       image_grid.save('myimage.jpg')
+
+    #plt.imshow(image_grid.permute(1, 2, 0).squeeze())
+    return im
+    #plt.show()
 
 ''' change the dataloader to be able to produce only zebras'''
 ''' maximize the zebras activation neuron with index value =340 in the las FC layer'''
@@ -91,15 +117,21 @@ adv_norm = nn.MSELoss()
 identity_norm = nn.L1Loss() 
 cycle_norm =nn.L1Loss() 
 
-n_epochs = 1000
+n_epochs = 2
 dim_A = 3
 dim_B = 3
 display_step = 200
-batch_size = 4
+batch_size = 1
 lr = 0.0002
 load_shape = 286
 target_shape = 256
 device = 'cuda'
+learning_rate= 0.0002
+wandb.config = {
+  "learning_rate": learning_rate,
+  "epochs": n_epochs,
+  "batch_size": batch_size
+}
 
 transform = transforms.Compose([
     transforms.Resize(load_shape),
@@ -134,7 +166,7 @@ dataset = ZebraDataset(path, mode, transform)
 a_dim = 3
 b_dim =3
 device = 'cuda'
-learning_rate= 0.0002
+
 ########################################################################################################
 
 
@@ -239,11 +271,12 @@ def train(save_model=False):
             disc_min_loss = disc_min_loss()
             
             disc_min_loss.backward(retain_graph=True) # Update gradients
+            disc_min_opt.step()
             '''retain_graph=True ===> Right now, a real use case is multi-task learning where you have multiple losses that maybe be at different layers. 
             Suppose that you have 2 losses: loss1 and loss2 and they reside in different layers. In order to backprop the gradient of loss1 and loss2 w.r.t to the learnable weight 
             of your network independently. You have to use retain_graph=True in backward() method in the first back-propagated loss.'''
-            disc_max_opt.step() # Update optimizer
-            
+            disc_max_opt.step()# Update optimizer
+            disc_max_opt.step()
             ### Update discriminator B ###
             with torch.no_grad():
                 maxed_x = gen_max(real_A)
@@ -293,27 +326,31 @@ def train(save_model=False):
             mean_discriminator_loss_a += disc_max_loss.item() / display_step
             # Keep track of the average generator loss
             mean_generator_loss += gen_max_loss.item() / display_step
-
+            wandb.log({"gen_max_loss": gen_max_loss, "gen_min_loss":gen_min_loss, "disc_max_loss":disc_max_loss,'disc_min_loss':disc_min_loss})
+            
             ### Visualization code ###
-            if cur_step % display_step == 0:
+            if cur_step % 100 == 0:
                 print(f"Epoch {epoch}: Step {cur_step}: Generator (U-Net) loss: {mean_generator_loss}, Discriminator _a_ loss: {mean_discriminator_loss_a}")
                 
+               
                 
-                def show_tensor_images(image_tensor, num_images=25, size=(1, 28, 28)):
-                    '''
-                    Function for visualizing images: Given a tensor of images, number of images, and
-                    size per image, plots and prints the images in an uniform grid.
-                    '''
-                    image_tensor = (image_tensor + 1) / 2
-                    image_shifted = image_tensor
-                    image_unflat = image_shifted.detach().cpu().view(-1, *size)
-                    image_grid = make_grid(image_unflat[:num_images], nrow=5)
-                    plt.imshow(image_grid.permute(1, 2, 0).squeeze())
-                    plt.show()
-                    
-                show_tensor_images(torch.cat([real_A, real_A]), size=(dim_A, target_shape, target_shape))
+                
+                #maxed_images = show_tensor_images(torch.cat([real_A, maxed_x]), size=(dim_A, target_shape, target_shape))
+                
+                
+                #print(f'maxed image size =================<{maxed_images.shape}')
+                #mined_images = show_tensor_images(torch.cat([real_A, mined_x]), size=(dim_A, target_shape, target_shape))
+                
+                           #, "mined":wandb.Image(mined_images)})
+                
+                
+                
+                
+                   
+                
+                
                 print('maxed_x shape =======>',maxed_x.shape)
-                show_tensor_images(torch.cat([maxed_x, mined_x]), size=(dim_B, target_shape, target_shape))
+                #show_tensor_images(torch.cat([maxed_x, mined_x]), size=(dim_B, target_shape, target_shape))
                 mean_generator_loss = 0
                 mean_discriminator_loss_a = 0
                 # You can change save_model to True if you'd like to save the model
@@ -328,7 +365,17 @@ def train(save_model=False):
                         'disc_max': disc_max.state_dict(),
                         'disc_max_opt': disc_max_opt.state_dict()
                     }, f"cycleGAN_{cur_step}.pth")
+                    
             cur_step += 1
+            if cur_step % 100 == 0:
+                maxed_images = show_tensor_images(maxed_x, size=(dim_A, target_shape, target_shape))
+                maxed_images.save('maxed_img_step{cur_step}_epoch{epoch}.jpg')
+                
+                mined_images = show_tensor_images(mined_x, size=(dim_A, target_shape, target_shape))
+                mined_images.save('mined_img_step{cur_step}_epoch{epoch}.jpg')
+                
+                wandb.log({f"maxed{epoch}{cur_step}": wandb.Image('maxed_img_step{cur_step}_epoch{epoch}.jpg')})  
+                wandb.log({f"mined{epoch}{cur_step}": wandb.Image('mined_img_step{cur_step}_epoch{epoch}.jpg')})  
             
 if __name__ == '__main__':
     

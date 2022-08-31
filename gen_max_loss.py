@@ -103,5 +103,6 @@ class Max_Generator_Loss:
     def __call__(self, adv_weight=0.35, id_weight=0.3, cycle_weight=0.35,activation_weight=0.38):
         
         x = (adv_weight * self.adv_loss_max) + (id_weight * self.id_loss_max) + (cycle_weight * self.cycle_max)+ (activation_weight*self.sum_actmax_loss)
+        #x = (adv_weight * self.adv_loss_max) + (id_weight * self.id_loss_max) + (cycle_weight * self.cycle_max)
         #print('shape of sum_adv_loss ')
         return x
