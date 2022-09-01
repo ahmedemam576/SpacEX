@@ -198,10 +198,7 @@ class ImageDatasetASOS(Dataset):
 
     def __getitem__(self, index):
 
-        index_1 = index
-        index_2 = index + 1 if index < len(self.dataset) else 0
-
-        return self.dataset[index_1]['x'], self.dataset[index_2]['x']
+        return self.dataset[index]['x'], self.dataset[index]['x']  # two times same image
 
     def __len__(self):
         return len(self.dataset)
@@ -375,16 +372,14 @@ def train(save_model=False):
                 
                 elif experiment == 'asos':
 
-                    def show_tensor_images(tensor):
+                    def show_tensor_images(tensor, desc=''):
                         rgb = dataset.dataset.get_rgb(tensor[0].cpu())
                         plt.imshow(rgb)
-                        plt.show()
+                        #plt.show()
+                        plt.savefig(desc + str(cur_step) + '.png')
 
-                    show_tensor_images(real_A)
-                    show_tensor_images(fake_A)
-
-                    show_tensor_images(real_B)
-                    show_tensor_images(fake_B)
+                    show_tensor_images(real_A, os.path.expanduser('~/working_dir/images/real_A'))
+                    show_tensor_images(fake_A, os.path.expanduser('~/working_dir/images/fake_A'))
                 
                 mean_generator_loss = 0
                 mean_discriminator_loss_a = 0
@@ -403,4 +398,4 @@ def train(save_model=False):
             
 if __name__ == '__main__':
     
-    train()
+    train(True)
