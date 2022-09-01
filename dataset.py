@@ -10,7 +10,7 @@ import glob
 import os
 from PIL import Image
 import torch
-from skimage.color import gray2rgba
+#from skimage.color import gray2rgba
 import numpy as np
 
 path = 'horse2zebra'

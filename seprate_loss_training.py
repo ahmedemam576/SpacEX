@@ -36,10 +36,63 @@ from dataset import ZebraDataset
 
 from torchvision.models import resnet50, ResNet50_Weights
 
-# Using pretrained weights: we use resnett 50 pretrained classifier trained on imagenet1k dataset
-resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
-resnet50(weights="IMAGENET1K_V1")
-model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1).to('cuda')
+import warnings
+import asos_model
+from tlib import tlearn, ttorch, tutils
+from tqdm import tqdm as tqdm_dataloader
+
+
+# configuration
+
+experiment = 'asos'  # 'resnet', 'asos'
+channels = list(range(10))  # list(range(10)) means take all channels, for RGB give list [0, 1, 2]
+
+
+# paths
+
+# the anthroprotect dataset (asos) can be downloaded here: http://rs.ipb.uni-bonn.de/data/anthroprotect/
+# the model state dict of asos can be downloaded here: http://rs.ipb.uni-bonn.de/downloads/asos/
+
+hostname_username = tutils.machine.get_machine_infos()
+
+if hostname_username == ('?', '?'):  # ahmeds local machine
+    asos_model_checkpoint = '?'
+    asos_data_path = '?'
+
+elif hostname_username == ('cubesat.itg.uni-bonn.de', '?'):  # ahmeds box
+    asos_model_checkpoint = '?'
+    asos_data_path = '?'
+
+elif hostname_username == ('timodell', 'timo'):  # timos local machine
+    asos_model_checkpoint = os.path.expanduser('~/working_dir/model_state_dict.pt')
+    asos_data_path = os.path.expanduser('~/data/anthroprotect')
+
+elif hostname_username == ('cubesat.itg.uni-bonn.de', 'tstom'):  # timos box
+    asos_model_checkpoint = '/scratch/tstom/working_dir/model_state_dict.pt'
+    asos_data_path = '/scratch/tstom/data/anthroprotect'
+
+else:
+    warnings.warn('No settings given for this computer/user!')
+
+
+# define model
+
+if experiment == 'resnet':
+    # Using pretrained weights: we use resnett 50 pretrained classifier trained on imagenet1k dataset
+    resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
+    resnet50(weights="IMAGENET1K_V1")
+    model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1).to('cuda')
+
+elif experiment == 'asos':
+    model = asos_model.Model(
+        in_channels=len(channels), n_unet_maps=3, n_classes=1, unet_base_channels=32, double_conv=False, batch_norm=True,
+        unet_mode='bilinear', unet_activation=nn.Tanh(), final_activation=nn.Sigmoid())
+    model.load_state_dict(torch.load(asos_model_checkpoint))
+    model.cuda()
+
+else:
+    warnings.warn('Unvalid string for model!')
+
 
 # registering a forward hook to the classifier to record the output of the last FC layer
 def layer_hook(act_dict, layer_name):
@@ -47,7 +100,12 @@ def layer_hook(act_dict, layer_name):
         act_dict[layer_name] = output
     return hook
 hook_dict = dict()
-model.fc.register_forward_hook(layer_hook(hook_dict, 'fc'))
+
+if experiment == 'resnet':
+    model.fc.register_forward_hook(layer_hook(hook_dict, 'fc'))
+
+elif experiment == 'asos':
+    model.classifier[9].register_forward_hook(layer_hook(hook_dict, 9))
 
 
 ''' change the dataloader to be able to produce only zebras'''
@@ -92,14 +150,15 @@ identity_norm = nn.L1Loss()
 cycle_norm =nn.L1Loss() 
 
 n_epochs = 1000
-dim_A = 3
-dim_B = 3
+dim_A = 3 if experiment == 'resnet' else 10
+dim_B = 3 if experiment == 'resnet' else 10
 display_step = 200
-batch_size = 4
+batch_size = 1
 lr = 0.0002
-load_shape = 286
+load_shape = 286 if experiment == 'resnet' else 256
 target_shape = 256
 device = 'cuda'
+num_workers = 6
 
 transform = transforms.Compose([
     transforms.Resize(load_shape),
@@ -125,14 +184,45 @@ transform = transforms.Compose([
 
 
 
-path = 'horse2zebra'
-mode= 'train'
-dataset = ZebraDataset(path, mode, transform)
+if experiment == 'resnet':
+    path = 'horse2zebra'
+    mode= 'train'
+    dataset = ZebraDataset(path, mode, transform)
 
+elif experiment == 'asos':
+
+    csv_file = os.path.join(asos_data_path, 'infos.csv')
+    data_folder_tiles = os.path.join(asos_data_path, 'tiles', 's2')
+
+    file_infos = tlearn.data.files.FileInfosGeotif(
+        csv_file=csv_file,
+        folder=data_folder_tiles,
+    )
+
+    datamodule = ttorch.data.images.DataModule(
+        file_infos=file_infos.df,
+        folder=data_folder_tiles,
+
+        channels=channels,
+        x_normalization=(0, 10000),
+        clip_range=(0, 1),
+        rotate=False,
+        cutmix=None,
+        n_classes=1,
+
+        use_rasterio=True,
+        rgb_channels=[2, 1, 0],
+        val_range=(0, 2**10),
+
+        batch_size=batch_size,
+        num_workers=num_workers,
+    )
+
+    dataset = datamodule.train_dataset
 
 # define  training parameters
-a_dim = 3
-b_dim =3
+a_dim = 3 if experiment == 'resnet' else 10
+b_dim =3 if experiment == 'resnet' else 10
 device = 'cuda'
 learning_rate= 0.0002
 ########################################################################################################
@@ -194,10 +284,14 @@ def train(save_model=False):
         # for image, _ in tqdm(dataloader):
             
             
-        for real_A in dataloader:
+        for real_A in tqdm_dataloader(dataloader):
+
+            if experiment == 'asos':
+                real_A = real_A['x']
             
             # image_width = image.shape[3]
-            real_A = nn.functional.interpolate(real_A, size=target_shape) 
+            if experiment == 'resnet':
+                real_A = nn.functional.interpolate(real_A, size=target_shape)
             
              
             
@@ -299,21 +393,36 @@ def train(save_model=False):
                 print(f"Epoch {epoch}: Step {cur_step}: Generator (U-Net) loss: {mean_generator_loss}, Discriminator _a_ loss: {mean_discriminator_loss_a}")
                 
                 
-                def show_tensor_images(image_tensor, num_images=25, size=(1, 28, 28)):
-                    '''
-                    Function for visualizing images: Given a tensor of images, number of images, and
-                    size per image, plots and prints the images in an uniform grid.
-                    '''
-                    image_tensor = (image_tensor + 1) / 2
-                    image_shifted = image_tensor
-                    image_unflat = image_shifted.detach().cpu().view(-1, *size)
-                    image_grid = make_grid(image_unflat[:num_images], nrow=5)
-                    plt.imshow(image_grid.permute(1, 2, 0).squeeze())
-                    plt.show()
-                    
-                show_tensor_images(torch.cat([real_A, real_A]), size=(dim_A, target_shape, target_shape))
-                print('maxed_x shape =======>',maxed_x.shape)
-                show_tensor_images(torch.cat([maxed_x, mined_x]), size=(dim_B, target_shape, target_shape))
+                if experiment == 'resnet':
+                
+                    def show_tensor_images(image_tensor, num_images=25, size=(1, 28, 28)):
+                        '''
+                        Function for visualizing images: Given a tensor of images, number of images, and
+                        size per image, plots and prints the images in an uniform grid.
+                        '''
+                        image_tensor = (image_tensor + 1) / 2
+                        image_shifted = image_tensor
+                        image_unflat = image_shifted.detach().cpu().view(-1, *size)
+                        image_grid = make_grid(image_unflat[:num_images], nrow=5)
+                        plt.imshow(image_grid.permute(1, 2, 0).squeeze())
+                        plt.show()
+                        
+                    show_tensor_images(torch.cat([real_A, real_A]), size=(dim_A, target_shape, target_shape))
+                    print('maxed_x shape =======>',maxed_x.shape)
+                    show_tensor_images(torch.cat([maxed_x, mined_x]), size=(dim_B, target_shape, target_shape))
+                
+                elif experiment == 'asos':
+
+                    def show_tensor_images(tensor, desc=''):
+                        rgb = dataset.get_rgb(tensor[0].cpu())
+                        plt.imshow(rgb)
+                        #plt.show()
+                        plt.savefig(desc + str(cur_step) + '.png')
+
+                    show_tensor_images(real_A, os.path.expanduser('~/working_dir/images/real'))
+                    show_tensor_images(maxed_x, os.path.expanduser('~/working_dir/images/maxed'))
+                    show_tensor_images(mined_x, os.path.expanduser('~/working_dir/images/mined'))
+                
                 mean_generator_loss = 0
                 mean_discriminator_loss_a = 0
                 # You can change save_model to True if you'd like to save the model

@@ -78,7 +78,8 @@ class Generator_Loss(Gan_loss_term):
     
     
     def AM_loss(self):
-        activation = self.hook_dict[0][0][0]
+        #activation = self.hook_dict['fc'][0][340]
+        activation = self.hook_dict[9][0][0]
         sum_am_loss =self.identity_norm(activation, torch.ones_like(activation))
         return sum_am_loss
     

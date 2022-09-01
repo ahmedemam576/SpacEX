@@ -23,7 +23,6 @@ from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from PIL import Image
 from tqdm.auto import tqdm
-from tqdm import tqdm as tqdm_dataloader
 from torchvision import transforms
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
@@ -33,6 +32,7 @@ from torchvision.models import resnet50, ResNet50_Weights
 import warnings
 import asos_model
 from tlib import tlearn, ttorch, tutils
+from tqdm import tqdm as tqdm_dataloader
 
 
 # configuration
