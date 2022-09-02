@@ -24,6 +24,8 @@ from tqdm.auto import tqdm
 from torchvision import transforms
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
+import numpy as np
+import wandb
 
 # importing the framework's buildng blocks 
 from generator import Generator
@@ -41,7 +43,8 @@ import asos_model
 from tlib import tlearn, ttorch, tutils
 from tqdm import tqdm as tqdm_dataloader
 
-
+'wandb initialization'
+wandb.init(project="max_project", entity="remote_sens")
 # configuration
 
 experiment = 'asos'  # 'resnet', 'asos'
@@ -108,42 +111,7 @@ elif experiment == 'asos':
     model.classifier[9].register_forward_hook(layer_hook(hook_dict, 9))
 
 
-''' change the dataloader to be able to produce only zebras'''
-''' maximize the zebras activation neuron with index value =340 in the las FC layer'''
 
-'''class ImageDataset(Dataset):
-    def __init__(self, root, transform=None, mode='train'):
-        self.transform = transform
-        # glob searches for a file with specific pattern
-        # join, just concatenate two pathes, and using ('sA' % mode) will add A at the end of the root path without spaces
-        # sorted will give us the path sorted ascendingly
-        
-        self.files_A = sorted(glob.glob(os.path.join(root, '%sA' % mode) + '/*.*')) # can be replaced by '/**', recursive = True
-        self.files_B = sorted(glob.glob(os.path.join(root, '%sB' % mode) + '/*.*'))
-        if len(self.files_A) > len(self.files_B):
-            self.files_A, self.files_B = self.files_B, self.files_A
-        self.new_perm()
-        assert len(self.files_A) > 0, "Make sure you downloaded the horse2zebra images!"
-
-    def new_perm(self):
-        self.randperm = torch.randperm(len(self.files_B))[:len(self.files_A)]
-
-    def __getitem__(self, index):
-        item_A = self.transform(Image.open(self.files_A[index % len(self.files_A)]))
-        item_B = self.transform(Image.open(self.files_B[self.randperm[index]]))
-        'we are trying to solve the problem in case we have a greyscale image'
-        if item_A.shape[0] != 3: 
-            item_A = item_A.repeat(3, 1, 1)
-        if item_B.shape[0] != 3: 
-            item_B = item_B.repeat(3, 1, 1)
-        if index == len(self) - 1:
-            self.new_perm()
-        # Old versions of PyTorch didn't support normalization for different-channeled images
-     
-        return item_A, item_B
-
-    def __len__(self):
-        return min(len(self.files_A), len(self.files_B))'''
 
 adv_norm = nn.MSELoss() 
 identity_norm = nn.L1Loss() 
@@ -160,6 +128,15 @@ target_shape = 256
 device = 'cuda'
 num_workers = 6
 
+
+
+wandb.config = {
+  "learning_rate": lr,
+  "epochs": n_epochs,
+  "batch_size": batch_size
+                  }
+
+
 transform = transforms.Compose([
     transforms.Resize(load_shape),
     transforms.RandomCrop(target_shape),
@@ -170,17 +147,6 @@ transform = transforms.Compose([
                                 ])
 
 
-
-
-'''transform = transforms.Compose([
-    
-    transforms.Resize(255),
-    transforms.CenterCrop(224),
-    transforms.ToTensor(),
-    transforms.RandomHorizontalFlip(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-])
-'''
 
 
 
@@ -229,22 +195,7 @@ learning_rate= 0.0002
 
 
 
-
-
-
-
-
-
 # defining the criterion losses
-
-'''
-we gonna sart the adaptaion for the generators and discriminator losses from here
-
-
-
-'''
-
-
 
 adverserial_mse_loss = torch.nn.MSELoss()
 reconstruction_absolute_diff= torch.nn.L1Loss()
@@ -400,16 +351,33 @@ def train(save_model=False):
                         Function for visualizing images: Given a tensor of images, number of images, and
                         size per image, plots and prints the images in an uniform grid.
                         '''
-                        image_tensor = (image_tensor + 1) / 2
                         image_shifted = image_tensor
-                        image_unflat = image_shifted.detach().cpu().view(-1, *size)
-                        image_grid = make_grid(image_unflat[:num_images], nrow=5)
-                        plt.imshow(image_grid.permute(1, 2, 0).squeeze())
-                        plt.show()
+                        image_unflat = image_shifted.detach().cpu().view(-1, *size).squeeze().numpy()
+                        #print(f'image size =================<{image_unflat.shape}')
+                        #image_grid = make_grid(image_unflat[:num_images], nrow=5)
+                        image_grid= image_unflat.transpose(1, 2, 0).squeeze()
+                        im = Image.fromarray((image_grid*255).astype(np.uint8))
                         
-                    show_tensor_images(torch.cat([real_A, real_A]), size=(dim_A, target_shape, target_shape))
-                    print('maxed_x shape =======>',maxed_x.shape)
-                    show_tensor_images(torch.cat([maxed_x, mined_x]), size=(dim_B, target_shape, target_shape))
+                        #print(f'image size =================<{image_unflat.shape}')
+                        #       image_grid.save('myimage.jpg')
+
+                        #plt.imshow(image_grid.permute(1, 2, 0).squeeze())
+                        return im
+                    maxed_images = show_tensor_images(maxed_x, size=(dim_A, target_shape, target_shape))
+                    maxed_images.save('maxed_img_step{cur_step}_epoch{epoch}.jpg')
+                    
+                    mined_images = show_tensor_images(mined_x, size=(dim_A, target_shape, target_shape))
+                    mined_images.save('mined_img_step{cur_step}_epoch{epoch}.jpg')
+                    
+                    real_images = show_tensor_images(real_A, size=(dim_A, target_shape, target_shape))
+                    real_images.save('real_img_step{cur_step}_epoch{epoch}.jpg')
+                    # we are just saving 3 images
+                    'logging with wandb'
+                    wandb.log({f"maxed{epoch}{cur_step}": wandb.Image('maxed_img_step{cur_step}_epoch{epoch}.jpg')})  
+                    wandb.log({f"mined{epoch}{cur_step}": wandb.Image('mined_img_step{cur_step}_epoch{epoch}.jpg')})  
+                    wandb.log({f"real{epoch}{cur_step}": wandb.Image('real_img_step{cur_step}_epoch{epoch}.jpg')})
+                        
+                        ##################################################
                 
                 elif experiment == 'asos':
 
@@ -422,6 +390,10 @@ def train(save_model=False):
                     show_tensor_images(real_A, os.path.expanduser('~/working_dir/images/real'))
                     show_tensor_images(maxed_x, os.path.expanduser('~/working_dir/images/maxed'))
                     show_tensor_images(mined_x, os.path.expanduser('~/working_dir/images/mined'))
+                    
+                    wandb.log({f"maxed{epoch}{cur_step}": wandb.Image('~/working_dir/images/maxed')})  
+                    wandb.log({f"mined{epoch}{cur_step}": wandb.Image('~/working_dir/images/mined')})  
+                    wandb.log({f"real{epoch}{cur_step}": wandb.Image('~/working_dir/images/real')})
                 
                 mean_generator_loss = 0
                 mean_discriminator_loss_a = 0
