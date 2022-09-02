@@ -332,12 +332,7 @@ def train(save_model=False):
 
 
 
-            # Keep track of the average discriminator loss
-        
-            mean_generator_loss =0
-            mean_discriminator_loss_a += disc_max_loss.item() / display_step
-            # Keep track of the average generator loss
-            mean_generator_loss += gen_max_loss.item() / display_step
+            
 
             ### Visualization code ###
             if cur_step % display_step == 0:
