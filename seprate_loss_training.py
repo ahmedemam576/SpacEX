@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Wed Aug  3 11:36:11 2022
+Created on Wed Aug 24 11:34:13 2022
 
 @author: ahmedemam576
+"""
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+training for separate loss functions
 """
 import torch
 import torchvision
@@ -11,14 +17,6 @@ from torch import nn
 import glob
 import random
 import os
-
-
-import torch
-from generator import Generator
-from patch_discriminator import Patch_Discriminator
-from generator_loss import Generator_Loss
-from discriminator_loss import Discriminator_loss
-
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from PIL import Image
@@ -26,6 +24,15 @@ from tqdm.auto import tqdm
 from torchvision import transforms
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
+
+# importing the framework's buildng blocks 
+from generator import Generator
+from patch_discriminator import Patch_Discriminator
+from gen_min_loss import  Min_Generator_Loss
+from gen_max_loss import Max_Generator_Loss     # ' separtate gen. losses'
+from discriminator_loss import Discriminator_loss 
+from dataset import ZebraDataset
+
 
 from torchvision.models import resnet50, ResNet50_Weights
 
@@ -71,10 +78,9 @@ else:
 # define model
 
 if experiment == 'resnet':
-    # Using pretrained weights:
+    # Using pretrained weights: we use resnett 50 pretrained classifier trained on imagenet1k dataset
     resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
     resnet50(weights="IMAGENET1K_V1")
-
     model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1).to('cuda')
 
 elif experiment == 'asos':
@@ -88,31 +94,31 @@ else:
     warnings.warn('Unvalid string for model!')
 
 
-# set hook
-
+# registering a forward hook to the classifier to record the output of the last FC layer
 def layer_hook(act_dict, layer_name):
     def hook(module, input, output):
-        act_dict[0] = output
+        act_dict[layer_name] = output
     return hook
-activation_dictionary = dict()
+hook_dict = dict()
 
 if experiment == 'resnet':
-    model.fc.register_forward_hook(layer_hook(activation_dictionary, 'fc'))
+    model.fc.register_forward_hook(layer_hook(hook_dict, 'fc'))
 
 elif experiment == 'asos':
-    model.classifier[9].register_forward_hook(layer_hook(activation_dictionary, 9))
+    model.classifier[9].register_forward_hook(layer_hook(hook_dict, 9))
 
 
-# dataset
+''' change the dataloader to be able to produce only zebras'''
+''' maximize the zebras activation neuron with index value =340 in the las FC layer'''
 
-class ImageDataset(Dataset):
+'''class ImageDataset(Dataset):
     def __init__(self, root, transform=None, mode='train'):
         self.transform = transform
         # glob searches for a file with specific pattern
         # join, just concatenate two pathes, and using ('sA' % mode) will add A at the end of the root path without spaces
         # sorted will give us the path sorted ascendingly
         
-        self.files_A = sorted(glob.glob(os.path.join(root, '%sA' % mode) + '/*.*'))
+        self.files_A = sorted(glob.glob(os.path.join(root, '%sA' % mode) + '/*.*')) # can be replaced by '/**', recursive = True
         self.files_B = sorted(glob.glob(os.path.join(root, '%sB' % mode) + '/*.*'))
         if len(self.files_A) > len(self.files_B):
             self.files_A, self.files_B = self.files_B, self.files_A
@@ -133,18 +139,17 @@ class ImageDataset(Dataset):
         if index == len(self) - 1:
             self.new_perm()
         # Old versions of PyTorch didn't support normalization for different-channeled images
-        '''return (item_A - 0.5) * 2, (item_B - 0.5) * 2'''
+     
         return item_A, item_B
 
     def __len__(self):
-        return min(len(self.files_A), len(self.files_B))
+        return min(len(self.files_A), len(self.files_B))'''
 
+adv_norm = nn.MSELoss() 
+identity_norm = nn.L1Loss() 
+cycle_norm =nn.L1Loss() 
 
-
-adv_criterion = nn.MSELoss() 
-recon_criterion = nn.L1Loss() 
-
-n_epochs = 5
+n_epochs = 1000
 dim_A = 3 if experiment == 'resnet' else 10
 dim_B = 3 if experiment == 'resnet' else 10
 display_step = 200
@@ -160,85 +165,105 @@ transform = transforms.Compose([
     transforms.RandomCrop(target_shape),
     transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225]),
+    
+                                ])
+
+
+
+
+'''transform = transforms.Compose([
+    
+    transforms.Resize(255),
+    transforms.CenterCrop(224),
+    transforms.ToTensor(),
+    transforms.RandomHorizontalFlip(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
+'''
 
-
-class ImageDatasetASOS(Dataset):
-
-    def __init__(self):
-        
-        csv_file = os.path.join(asos_data_path, 'infos.csv')
-        data_folder_tiles = os.path.join(asos_data_path, 'tiles', 's2')
-
-        file_infos = tlearn.data.files.FileInfosGeotif(
-            csv_file=csv_file,
-            folder=data_folder_tiles,
-        )
-
-        datamodule = ttorch.data.images.DataModule(
-            file_infos=file_infos.df,
-            folder=data_folder_tiles,
-
-            channels=channels,
-            x_normalization=(0, 10000),
-            clip_range=(0, 1),
-            rotate=False,
-            cutmix=None,
-            n_classes=1,
-
-            use_rasterio=True,
-            rgb_channels=[2, 1, 0],
-            val_range=(0, 2**10),
-
-            batch_size=batch_size,
-            num_workers=num_workers,
-        )
-
-        self.dataset = datamodule.train_dataset
-
-    def __getitem__(self, index):
-
-        return self.dataset[index]['x'], self.dataset[index]['x']  # two times same image
-
-    def __len__(self):
-        return len(self.dataset)
 
 
 if experiment == 'resnet':
-    dataset = ImageDataset("horse2zebra", transform=transform)
+    path = 'horse2zebra'
+    mode= 'train'
+    dataset = ZebraDataset(path, mode, transform)
 
 elif experiment == 'asos':
-    dataset = ImageDatasetASOS()
 
+    csv_file = os.path.join(asos_data_path, 'infos.csv')
+    data_folder_tiles = os.path.join(asos_data_path, 'tiles', 's2')
+
+    file_infos = tlearn.data.files.FileInfosGeotif(
+        csv_file=csv_file,
+        folder=data_folder_tiles,
+    )
+
+    datamodule = ttorch.data.images.DataModule(
+        file_infos=file_infos.df,
+        folder=data_folder_tiles,
+
+        channels=channels,
+        x_normalization=(0, 10000),
+        clip_range=(0, 1),
+        rotate=False,
+        cutmix=None,
+        n_classes=1,
+
+        use_rasterio=True,
+        rgb_channels=[2, 1, 0],
+        val_range=(0, 2**10),
+
+        batch_size=batch_size,
+        num_workers=num_workers,
+    )
+
+    dataset = datamodule.train_dataset
 
 # define  training parameters
-a_dim = 3 if experiment == 'resnet' else len(channels)
-b_dim =3 if experiment == 'resnet' else len(channels)
+a_dim = 3 if experiment == 'resnet' else 10
+b_dim =3 if experiment == 'resnet' else 10
 device = 'cuda'
 learning_rate= 0.0002
+########################################################################################################
+
+
+
+
+
+
+
 
 
 # defining the criterion losses
+
+'''
+we gonna sart the adaptaion for the generators and discriminator losses from here
+
+
+
+'''
+
+
+
 adverserial_mse_loss = torch.nn.MSELoss()
 reconstruction_absolute_diff= torch.nn.L1Loss()
 
 
-# we initialize the Generators and the discriminators
-gen_AB = Generator(a_dim, b_dim).to(device)
+# initialize the Generators and the discriminators
+gen_max = Generator(a_dim, b_dim).to(device)
+gen_min = Generator(b_dim, a_dim).to(device)
+disc_max = Patch_Discriminator(a_dim).to(device)
+disc_min = Patch_Discriminator(b_dim).to(device)
 
 
+# setting the optimizers for the gens and discs
 
-gen_BA = Generator(b_dim, a_dim).to(device)
+gen_max_opt = torch.optim.Adam(gen_max.parameters(), lr=learning_rate, betas=(0.5,0.999))
+gen_min_opt = torch.optim.Adam(gen_min.parameters(), lr=learning_rate, betas=(0.5,0.999))
 
-
-
-
-disc_A = Patch_Discriminator(a_dim).to(device)
-disc_B = Patch_Discriminator(b_dim).to(device)
-
-gen_opt = torch.optim.Adam(list(gen_AB.parameters())+list(gen_BA.parameters()), lr=learning_rate, betas=(0.5,0.999))
-disc_A_opt = torch.optim.Adam(disc_A.parameters(), lr=learning_rate, betas=(0.5,0.999))
-disc_B_opt = torch.optim.Adam(disc_B.parameters(), lr= learning_rate, betas=(0.5,0.999))
+disc_max_opt = torch.optim.Adam(disc_max.parameters(), lr=learning_rate, betas=(0.5,0.999))
+disc_min_opt = torch.optim.Adam(disc_min.parameters(), lr= learning_rate, betas=(0.5,0.999))
 
 
 
@@ -254,15 +279,20 @@ def train(save_model=False):
     cur_step = 0
 
     for epoch in  tqdm(range(n_epochs)):
+        
         # Dataloader returns the batches
         # for image, _ in tqdm(dataloader):
             
-        '''hat8yr fel dataloader b7es ytl3 sora wa7da bs'''
-        for real_A, real_B in tqdm_dataloader(dataloader, desc='current epoch', leave=False):
+            
+        for real_A in tqdm_dataloader(dataloader):
+
+            if experiment == 'asos':
+                real_A = real_A['x']
             
             # image_width = image.shape[3]
-            real_A = nn.functional.interpolate(real_A, size=target_shape)
-            real_B = nn.functional.interpolate(real_B, size=target_shape)
+            if experiment == 'resnet':
+                real_A = nn.functional.interpolate(real_A, size=target_shape)
+            
              
             
             '''nn.functional.interpolate : Down/up samples the input to either the given size or the given scale_factor
@@ -279,11 +309,10 @@ def train(save_model=False):
             cur_batch_size = len(real_A)
             
             real_A = real_A.to(device)
-            real_B = real_B.to(device)
             
+            model.eval() #we freeze the pretrained classifier weights 
             with torch.no_grad():
-                
-                outputs =model(real_A)
+                model(real_A)
                 #activation = activation_dictionary[0][0][0]  #the first neuron in the linear layer
                 #print(activation)
 
@@ -292,35 +321,31 @@ def train(save_model=False):
             '''
             lazm tl3b fel discriminators
             wel discriminator optimizer
-            wel discriminator loss'''
+            wel discriminator loss
+            '''
             
-            disc_A_opt.zero_grad() # Zero out the gradient before backpropagation
-            disc_B_opt.zero_grad() # Zero out the gradient before backpropagation
+            disc_min_opt.zero_grad() # Zero out the gradient before backpropagation
+            disc_max_opt.zero_grad() # Zero out the gradient before backpropagation
             with torch.no_grad():
-                fake_A = gen_BA(real_B)
+                mined_x = gen_min(real_A)
             
-            disc_a_loss = Discriminator_loss(real_A, fake_A, disc_A, adverserial_mse_loss)
-                
-                
-            disc_a_loss = disc_a_loss()
+            disc_min_loss = Discriminator_loss(real_A, mined_x, disc_min, adv_norm)         
+            disc_min_loss = disc_min_loss()
             
-            disc_a_loss.backward(retain_graph=True) # Update gradients
-            disc_A_opt.step() # Update optimizer
+            disc_min_loss.backward(retain_graph=True) # Update gradients
+            '''retain_graph=True ===> Right now, a real use case is multi-task learning where you have multiple losses that maybe be at different layers. 
+            Suppose that you have 2 losses: loss1 and loss2 and they reside in different layers. In order to backprop the gradient of loss1 and loss2 w.r.t to the learnable weight 
+            of your network independently. You have to use retain_graph=True in backward() method in the first back-propagated loss.'''
+            disc_max_opt.step() # Update optimizer
             
-            
-            
-            
-            
-
             ### Update discriminator B ###
-            
             with torch.no_grad():
-                fake_B = gen_AB(real_A)
+                maxed_x = gen_max(real_A)
                 
-            disc_b_loss = Discriminator_loss(real_B, fake_A, disc_B, adverserial_mse_loss)
-            disc_b_loss = disc_b_loss()
-            disc_b_loss.backward(retain_graph=True) # Update gradients
-            disc_B_opt.step() # Update optimizer
+            disc_max_loss = Discriminator_loss(real_A, maxed_x, disc_max, adv_norm)
+            disc_max_loss = disc_max_loss() #' running the call method'
+            disc_max_loss.backward(retain_graph=True) # Update gradients
+            disc_max_opt.step() # Update optimizer
             
             
             
@@ -331,30 +356,45 @@ def train(save_model=False):
             wel generator optimizer
             wel generator loss'''
             
-            gen_opt.zero_grad()
-            main_generator_loss = Generator_Loss(real_X=real_A, real_Y=real_B,gen_XY= gen_AB, gen_YX=gen_BA,disc_X= disc_A,
-            disc_Y=disc_B,adv_norm= adverserial_mse_loss,identity_norm= reconstruction_absolute_diff,cycle_norm= reconstruction_absolute_diff, hook_dict= activation_dictionary)
+            gen_max_opt.zero_grad()
+            gen_min_opt.zero_grad()
+            # add with torch no grad here to separate each gen from the 
+            # computational graph of the other
+            with torch.no_grad():
+                mined_x = gen_min(real_A)
+            gen_max_loss = Max_Generator_Loss(real_A, gen_max, disc_min, disc_max, adv_norm, identity_norm, cycle_norm, hook_dict, mined_x)
+            with torch.no_grad():
+                maxed_x = gen_max(real_A)
+                #print('maxed_x shape =======>',maxed_x.shape)
+            gen_min_loss = Min_Generator_Loss(real_A, gen_min, disc_min, disc_max, adv_norm, identity_norm, cycle_norm, hook_dict,maxed_x)
+            # running the call method 
+            gen_max_loss = gen_max_loss()
+            gen_min_loss = gen_min_loss()
             
-            main_generator_loss =main_generator_loss()
-            #print('main_generator_loss----------------->',main_generator_loss.type)
-            main_generator_loss.backward() # Update gradients
-            gen_opt.step() # Update optimizer
+            # call the backward method
+            gen_max_loss.backward()
+            gen_min_loss.backward()
+            
+            # optimizers step
+            gen_max_opt.step()
+            gen_min_opt.step() # Update optimizer
 
 
 
             # Keep track of the average discriminator loss
         
             mean_generator_loss =0
-            mean_discriminator_loss_a += disc_a_loss.item() / display_step
+            mean_discriminator_loss_a += disc_max_loss.item() / display_step
             # Keep track of the average generator loss
-            mean_generator_loss += main_generator_loss.item() / display_step
+            mean_generator_loss += gen_max_loss.item() / display_step
 
             ### Visualization code ###
             if cur_step % display_step == 0:
                 print(f"Epoch {epoch}: Step {cur_step}: Generator (U-Net) loss: {mean_generator_loss}, Discriminator _a_ loss: {mean_discriminator_loss_a}")
                 
+                
                 if experiment == 'resnet':
-
+                
                     def show_tensor_images(image_tensor, num_images=25, size=(1, 28, 28)):
                         '''
                         Function for visualizing images: Given a tensor of images, number of images, and
@@ -366,36 +406,39 @@ def train(save_model=False):
                         image_grid = make_grid(image_unflat[:num_images], nrow=5)
                         plt.imshow(image_grid.permute(1, 2, 0).squeeze())
                         plt.show()
-                    
-                    show_tensor_images(torch.cat([real_A, real_B]), size=(dim_A, target_shape, target_shape))
-                    show_tensor_images(torch.cat([fake_B, fake_A]), size=(dim_B, target_shape, target_shape))
+                        
+                    show_tensor_images(torch.cat([real_A, real_A]), size=(dim_A, target_shape, target_shape))
+                    print('maxed_x shape =======>',maxed_x.shape)
+                    show_tensor_images(torch.cat([maxed_x, mined_x]), size=(dim_B, target_shape, target_shape))
                 
                 elif experiment == 'asos':
 
                     def show_tensor_images(tensor, desc=''):
-                        rgb = dataset.dataset.get_rgb(tensor[0].cpu())
+                        rgb = dataset.get_rgb(tensor[0].cpu())
                         plt.imshow(rgb)
                         #plt.show()
                         plt.savefig(desc + str(cur_step) + '.png')
 
-                    show_tensor_images(real_A, os.path.expanduser('~/working_dir/images/real_A'))
-                    show_tensor_images(fake_A, os.path.expanduser('~/working_dir/images/fake_A'))
+                    show_tensor_images(real_A, os.path.expanduser('~/working_dir/images/real'))
+                    show_tensor_images(maxed_x, os.path.expanduser('~/working_dir/images/maxed'))
+                    show_tensor_images(mined_x, os.path.expanduser('~/working_dir/images/mined'))
                 
                 mean_generator_loss = 0
                 mean_discriminator_loss_a = 0
                 # You can change save_model to True if you'd like to save the model
                 if save_model:
                     torch.save({
-                        'gen_AB': gen_AB.state_dict(),
-                        'gen_BA': gen_BA.state_dict(),
-                        'gen_opt': gen_opt.state_dict(),
-                        'disc_A': disc_A.state_dict(),
-                        'disc_A_opt': disc_A_opt.state_dict(),
-                        'disc_B': disc_B.state_dict(),
-                        'disc_B_opt': disc_B_opt.state_dict()
+                        'gen_max': gen_max.state_dict(),
+                        'gen_min': gen_min.state_dict(),
+                        'gen_max_opt': gen_max_opt.state_dict(),
+                        'gen_min_opt': gen_min_opt.state_dict(),
+                        'disc_min': disc_min.state_dict(),
+                        'disc_min_opt': disc_min_opt.state_dict(),
+                        'disc_max': disc_max.state_dict(),
+                        'disc_max_opt': disc_max_opt.state_dict()
                     }, f"cycleGAN_{cur_step}.pth")
             cur_step += 1
             
 if __name__ == '__main__':
     
-    train(True)
+    train()
