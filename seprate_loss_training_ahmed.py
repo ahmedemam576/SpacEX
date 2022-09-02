@@ -383,4 +383,4 @@ def train(save_model=False):
             
 if __name__ == '__main__':
     
-    train()
+    train(True)
