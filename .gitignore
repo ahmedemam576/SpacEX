@@ -117,3 +117,5 @@ dmypy.json
 # Others
 .vscode/*
 
+# own
+wandb/

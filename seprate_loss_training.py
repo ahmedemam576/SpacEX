@@ -63,7 +63,7 @@ if hostname_username == ('?', '?'):  # ahmeds local machine
     asos_model_checkpoint = '?'
     asos_data_path = '?'
 
-elif hostname_username == ('cubesat.itg.uni-bonn.de', '?'):  # ahmeds box
+elif hostname_username == ('ibg2701', '?'):  # ahmeds box
     working_dir = '?'
     asos_model_checkpoint = '?'
     asos_data_path = '?'
@@ -73,10 +73,10 @@ elif hostname_username == ('timodell', 'timo'):  # timos local machine
     asos_model_checkpoint = os.path.join(working_dir, 'model_state_dict.pt')
     asos_data_path = os.path.expanduser('~/data/anthroprotect')
 
-elif hostname_username == ('cubesat.itg.uni-bonn.de', 'tstom'):  # timos box
-    working_dir = os.path.expanduser('/scratch/tstom/working_dir')
+elif hostname_username == ('ibg2701', 'tstomberg'):  # timos box
+    working_dir = '/data/home/tstomberg/working_dir'
     asos_model_checkpoint = os.path.join(working_dir, 'model_state_dict.pt')
-    asos_data_path = '/scratch/tstom/data/anthroprotect'
+    asos_data_path = '/data/home/tstomberg/data/anthroprotect'
 
 else:
     warnings.warn('No settings given for this computer/user!')
@@ -334,9 +334,13 @@ def train(save_model=False):
             gen_max_opt.step()
             gen_min_opt.step() # Update optimizer
 
+            wandb.log({
+                'disc_max_loss': disc_max_loss.item(),
+                'disc_min_loss': disc_min_loss.item(),
+                'gen_max_loss': gen_max_loss.item(),
+                'gen_min_loss': gen_min_loss.item(),
+            }, step=cur_step)
 
-
-            
 
             ### Visualization code ###
             if cur_step % display_step == 0:
