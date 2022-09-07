@@ -5,7 +5,7 @@ conda activate spacex
 conda install numpy pandas scikit-learn matplotlib tqdm
 
 conda install -c pytorch pytorch torchvision torchaudio cudatoolkit=11.3
-conda install -c conda-forge tensorboard
+conda install -c conda-forge tensorboard wandb
 
 conda install gdal
 conda install -c conda-forge earthengine-api

@@ -43,7 +43,7 @@ import asos_model
 from tlib import tlearn, ttorch, tutils
 from tqdm import tqdm as tqdm_dataloader
 
-'wandb initialization'
+print('wandb initialization')
 wandb.init(project="max_project", entity="remote_sens")
 # configuration
 
@@ -59,19 +59,23 @@ channels = list(range(10))  # list(range(10)) means take all channels, for RGB g
 hostname_username = tutils.machine.get_machine_infos()
 
 if hostname_username == ('?', '?'):  # ahmeds local machine
+    working_dir = '?'
     asos_model_checkpoint = '?'
     asos_data_path = '?'
 
 elif hostname_username == ('cubesat.itg.uni-bonn.de', '?'):  # ahmeds box
+    working_dir = '?'
     asos_model_checkpoint = '?'
     asos_data_path = '?'
 
 elif hostname_username == ('timodell', 'timo'):  # timos local machine
-    asos_model_checkpoint = os.path.expanduser('~/working_dir/model_state_dict.pt')
+    working_dir = os.path.expanduser('~/working_dir')
+    asos_model_checkpoint = os.path.join(working_dir, 'model_state_dict.pt')
     asos_data_path = os.path.expanduser('~/data/anthroprotect')
 
 elif hostname_username == ('cubesat.itg.uni-bonn.de', 'tstom'):  # timos box
-    asos_model_checkpoint = '/scratch/tstom/working_dir/model_state_dict.pt'
+    working_dir = os.path.expanduser('/scratch/tstom/working_dir')
+    asos_model_checkpoint = os.path.join(working_dir, 'model_state_dict.pt')
     asos_data_path = '/scratch/tstom/data/anthroprotect'
 
 else:
@@ -367,7 +371,7 @@ def train(save_model=False):
                     real_images = show_tensor_images(real_A, size=(dim_A, target_shape, target_shape))
                     real_images.save('real_img_step{cur_step}_epoch{epoch}.jpg')
                     # we are just saving 3 images
-                    'logging with wandb'
+                    print('logging with wandb')
                     wandb.log({f"maxed{epoch}{cur_step}": wandb.Image('maxed_img_step{cur_step}_epoch{epoch}.jpg')})  
                     wandb.log({f"mined{epoch}{cur_step}": wandb.Image('mined_img_step{cur_step}_epoch{epoch}.jpg')})  
                     wandb.log({f"real{epoch}{cur_step}": wandb.Image('real_img_step{cur_step}_epoch{epoch}.jpg')})
@@ -382,13 +386,13 @@ def train(save_model=False):
                         #plt.show()
                         plt.savefig(desc + str(cur_step) + '.png')
 
-                    show_tensor_images(real_A, os.path.expanduser('~/working_dir/images/real'))
-                    show_tensor_images(maxed_x, os.path.expanduser('~/working_dir/images/maxed'))
-                    show_tensor_images(mined_x, os.path.expanduser('~/working_dir/images/mined'))
+                    show_tensor_images(real_A, os.path.join(working_dir, 'images/real'))
+                    show_tensor_images(maxed_x, os.path.join(working_dir, 'images/maxed'))
+                    show_tensor_images(mined_x, os.path.join(working_dir, 'images/mined'))
                     
-                    wandb.log({f"maxed{epoch}{cur_step}": wandb.Image('~/working_dir/images/maxed')})  
-                    wandb.log({f"mined{epoch}{cur_step}": wandb.Image('~/working_dir/images/mined')})  
-                    wandb.log({f"real{epoch}{cur_step}": wandb.Image('~/working_dir/images/real')})
+                    wandb.log({f"maxed{epoch}{cur_step}": wandb.Image(os.path.join(working_dir, f'images/maxed{cur_step}.png'))})  
+                    wandb.log({f"mined{epoch}{cur_step}": wandb.Image(os.path.join(working_dir, f'images/mined{cur_step}.png'))})  
+                    wandb.log({f"real{epoch}{cur_step}": wandb.Image(os.path.join(working_dir, f'images/real{cur_step}.png'))})
                 
                 mean_generator_loss = 0
                 mean_discriminator_loss_a = 0
