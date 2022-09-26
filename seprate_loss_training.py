@@ -57,11 +57,12 @@ channels = list(range(10))  # list(range(10)) means take all channels, for RGB g
 # the model state dict of asos can be downloaded here: http://rs.ipb.uni-bonn.de/downloads/asos/
 
 hostname_username = tutils.machine.get_machine_infos()
+print(hostname_username)
 
-if hostname_username == ('?', '?'):  # ahmeds local machine
-    working_dir = '?'
-    asos_model_checkpoint = '?'
-    asos_data_path = '?'
+if hostname_username == ('ahmedemam576-Precision-7560', 'ahmedemam576'):  # ahmeds local machine
+    working_dir = os.path.expanduser('~/working_dir')
+    asos_model_checkpoint = '/home/ahmedemam576/ahmed_coding_streak/SpacEX/model_state_dict.pt'
+    asos_data_path = '/home/ahmedemam576/working_folder/data/anthroprotect'
 
 elif hostname_username == ('ibg2701', '?'):  # ahmeds box
     working_dir = '?'
@@ -139,7 +140,6 @@ wandb.config = {
   "epochs": n_epochs,
   "batch_size": batch_size
                   }
-
 
 transform = transforms.Compose([
     transforms.Resize(load_shape),
