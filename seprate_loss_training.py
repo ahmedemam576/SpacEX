@@ -291,7 +291,7 @@ def train(save_model=False):
             '''retain_graph=True ===> Right now, a real use case is multi-task learning where you have multiple losses that maybe be at different layers. 
             Suppose that you have 2 losses: loss1 and loss2 and they reside in different layers. In order to backprop the gradient of loss1 and loss2 w.r.t to the learnable weight 
             of your network independently. You have to use retain_graph=True in backward() method in the first back-propagated loss.'''
-            disc_max_opt.step() # Update optimizer
+            disc_min_opt.step() # Update optimizer
             
             ### Update discriminator B ###
             with torch.no_grad():
