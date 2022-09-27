@@ -122,7 +122,7 @@ adv_norm = nn.MSELoss()
 identity_norm = nn.L1Loss() 
 cycle_norm =nn.L1Loss() 
 
-n_epochs = 1000
+n_epochs = 3000
 dim_A = 3 if experiment == 'resnet' else 10
 dim_B = 3 if experiment == 'resnet' else 10
 display_step = 200
