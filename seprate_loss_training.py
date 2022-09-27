@@ -169,6 +169,9 @@ elif experiment == 'asos':
         folder=data_folder_tiles,
     )
 
+    # only protected areas
+    file_infos.df = file_infos.df[file_infos.df['label'] == 1]
+
     datamodule = ttorch.data.images.DataModule(
         file_infos=file_infos.df,
         folder=data_folder_tiles,
