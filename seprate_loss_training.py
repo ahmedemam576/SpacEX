@@ -48,7 +48,7 @@ wandb.init(project="max_project", entity="remote_sens")
 # configuration
 
 experiment = 'asos'  # 'resnet', 'asos'
-channels = list(range(10))  # list(range(10)) means take all channels, for RGB give list [0, 1, 2]
+channels = list(range(3))  # indices of channels of the images that shall be used
 
 
 # paths
@@ -194,8 +194,8 @@ elif experiment == 'asos':
     dataset = datamodule.train_dataset
 
 # define  training parameters
-a_dim = 3 if experiment == 'resnet' else 10
-b_dim =3 if experiment == 'resnet' else 10
+a_dim = 3 if experiment == 'resnet' else len(channels)
+b_dim = 3 if experiment == 'resnet' else len(channels)
 device = 'cuda'
 learning_rate= 0.0002
 ########################################################################################################
@@ -393,6 +393,11 @@ def train(save_model=False):
                         #plt.show()
                         plt.savefig(desc + str(cur_step) + '.png')
 
+                    # create folder
+                    path = os.path.join(working_dir, 'images')
+                    if not os.path.isdir(path):
+                        os.mkdir(path)
+                    
                     show_tensor_images(real_A, os.path.join(working_dir, 'images/real'))
                     show_tensor_images(maxed_x, os.path.join(working_dir, 'images/maxed'))
                     show_tensor_images(mined_x, os.path.join(working_dir, 'images/mined'))
