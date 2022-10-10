@@ -42,6 +42,7 @@ import warnings
 import asos_model
 from tlib import tlearn, ttorch, tutils
 from tqdm import tqdm as tqdm_dataloader
+from unet import UNet
 
 print('wandb initialization')
 wandb.init(project="max_project", entity="remote_sens")
@@ -61,7 +62,7 @@ print(hostname_username)
 
 if hostname_username == ('ahmedemam576-Precision-7560', 'ahmedemam576'):  # ahmeds local machine
     working_dir = os.path.expanduser('~/working_dir')
-    asos_model_checkpoint = '/home/ahmedemam576/ahmed_coding_streak/SpacEX/model_state_dict.pt'
+    asos_model_checkpoint = '/home/ahmedemam576/ahmed_coding_streak/SpacEX/model_state_dict_rgb-channels.pt'
     asos_data_path = '/home/ahmedemam576/working_folder/data/anthroprotect'
 
 elif hostname_username == ('ibg2701', '?'):  # ahmeds box
@@ -95,8 +96,8 @@ elif experiment == 'asos':
     model = asos_model.Model(
         in_channels=len(channels), n_unet_maps=3, n_classes=1, unet_base_channels=32, double_conv=False, batch_norm=True,
         unet_mode='bilinear', unet_activation=nn.Tanh(), final_activation=nn.Sigmoid())
-    model.load_state_dict(torch.load(asos_model_checkpoint))
-    model.cuda()
+    model.load_state_dict(torch.load(asos_model_checkpoint))  # ' load the jungle net weights'
+    model.cuda() 
 
 else:
     warnings.warn('Unvalid string for model!')
@@ -127,7 +128,7 @@ dim_A = 3 if experiment == 'resnet' else 10
 dim_B = 3 if experiment == 'resnet' else 10
 display_step = 200
 batch_size = 1
-lr = 0.0002
+lr = 0.0001
 load_shape = 286 if experiment == 'resnet' else 256
 target_shape = 256
 device = 'cuda'
@@ -209,8 +210,13 @@ reconstruction_absolute_diff= torch.nn.L1Loss()
 
 
 # initialize the Generators and the discriminators
-gen_max = Generator(a_dim, b_dim).to(device)
-gen_min = Generator(b_dim, a_dim).to(device)
+#gen_max = Generator(a_dim, b_dim).to(device)
+#gen_min = Generator(b_dim, a_dim).to(device)   # encoder decoder architecture for the generator
+
+gen_max = UNet(a_dim,b_dim).to(device)   # changing encode decoder into unet 
+gen_min = UNet(b_dim, a_dim).to(device)
+
+
 disc_max = Patch_Discriminator(a_dim).to(device)
 disc_min = Patch_Discriminator(b_dim).to(device)
 
