@@ -39,44 +39,45 @@ from dataset import ZebraDataset
 from torchvision.models import resnet50, ResNet50_Weights
 
 import warnings
-import asos_model
+import models.asos
 from tlib import tlearn, ttorch, tutils
 from tqdm import tqdm as tqdm_dataloader
 
-print('wandb initialization')
-wandb.init(project="max_project", entity="remote_sens")
+
+run_wandb = True
+
+if run_wandb:
+    print('wandb initialization')
+    wandb.init(project="max_project", entity="remote_sens")
+
+
 # configuration
-
-experiment = 'asos'  # 'resnet', 'asos'
-channels = list(range(3))  # indices of channels of the images that shall be used
-
 
 # paths
 
 # the anthroprotect dataset (asos) can be downloaded here: http://rs.ipb.uni-bonn.de/data/anthroprotect/
-# the model state dict of asos can be downloaded here: http://rs.ipb.uni-bonn.de/downloads/asos/
 
 hostname_username = tutils.machine.get_machine_infos()
 
 if hostname_username == ('?', '?'):  # ahmeds local machine
     working_dir = '?'
-    asos_model_checkpoint = '?'
-    asos_data_path = '?'
+    anthroprotect_data_path = '?'
+    mapinwild_data_path = '?'
 
 elif hostname_username == ('ibg2701', '?'):  # ahmeds box
     working_dir = '?'
-    asos_model_checkpoint = '?'
-    asos_data_path = '?'
+    anthroprotect_data_path = '?'
+    mapinwild_data_path = '?'
 
 elif hostname_username == ('timodell', 'timo'):  # timos local machine
     working_dir = os.path.expanduser('~/working_dir')
-    asos_model_checkpoint = os.path.join(working_dir, 'model_state_dict.pt')
-    asos_data_path = os.path.expanduser('~/data/anthroprotect')
+    anthroprotect_data_path = os.path.expanduser('~/data/anthroprotect')
+    mapinwild_data_path = os.path.expanduser('~/data/mapinwild')
 
 elif hostname_username == ('ibg2701', 'tstomberg'):  # timos box
     working_dir = '/data/home/tstomberg/working_dir'
-    asos_model_checkpoint = os.path.join(working_dir, 'model_state_dict.pt')
-    asos_data_path = '/data/home/tstomberg/data/anthroprotect'
+    anthroprotect_data_path = '/data/home/tstomberg/data/anthroprotect'
+    mapinwild_data_path = '?'
 
 else:
     warnings.warn('No settings given for this computer/user!')
@@ -84,17 +85,18 @@ else:
 
 # define model
 
-if experiment == 'resnet':
+experiment = 'mapinwild'  # 'horse2zebra', 'anthroprotect', 'mapinwild'
+
+if experiment == 'horse2zebra':
     # Using pretrained weights: we use resnett 50 pretrained classifier trained on imagenet1k dataset
     resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
     resnet50(weights="IMAGENET1K_V1")
     model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1).to('cuda')
+    channels = list(range(3))
 
-elif experiment == 'asos':
-    model = asos_model.Model(
-        in_channels=len(channels), n_unet_maps=3, n_classes=1, unet_base_channels=32, double_conv=False, batch_norm=True,
-        unet_mode='bilinear', unet_activation=nn.Tanh(), final_activation=nn.Sigmoid())
-    model.load_state_dict(torch.load(asos_model_checkpoint))
+elif experiment in ['anthroprotect', 'mapinwild']:
+    channels = list(range(10))  # specify
+    model = ttorch.model.load_model('./models/asos_mapinwild_all-channels.pt', ModelClass=models.asos.Model)
     model.cuda()
 
 else:
@@ -108,10 +110,10 @@ def layer_hook(act_dict, layer_name):
     return hook
 hook_dict = dict()
 
-if experiment == 'resnet':
+if experiment == 'horse2zebra':
     model.fc.register_forward_hook(layer_hook(hook_dict, 'fc'))
 
-elif experiment == 'asos':
+elif experiment in ['anthroprotect', 'mapinwild']:
     model.classifier[9].register_forward_hook(layer_hook(hook_dict, 9))
 
 
@@ -122,23 +124,23 @@ identity_norm = nn.L1Loss()
 cycle_norm =nn.L1Loss() 
 
 n_epochs = 1000
-dim_A = 3 if experiment == 'resnet' else 10
-dim_B = 3 if experiment == 'resnet' else 10
+dim_A = len(channels)
+dim_B = len(channels)
 display_step = 200
 batch_size = 1
 lr = 0.0002
-load_shape = 286 if experiment == 'resnet' else 256
+load_shape = 286 if experiment == 'horse2zebra' else 256
 target_shape = 256
 device = 'cuda'
 num_workers = 6
 
 
-
-wandb.config = {
-  "learning_rate": lr,
-  "epochs": n_epochs,
-  "batch_size": batch_size
-                  }
+if run_wandb:
+    wandb.config = {
+    "learning_rate": lr,
+    "epochs": n_epochs,
+    "batch_size": batch_size
+                    }
 
 
 transform = transforms.Compose([
@@ -154,15 +156,19 @@ transform = transforms.Compose([
 
 
 
-if experiment == 'resnet':
+if experiment == 'horse2zebra':
     path = 'horse2zebra'
     mode= 'train'
     dataset = ZebraDataset(path, mode, transform)
 
-elif experiment == 'asos':
+elif experiment in ['anthroprotect', 'mapinwild']:
 
-    csv_file = os.path.join(asos_data_path, 'infos.csv')
-    data_folder_tiles = os.path.join(asos_data_path, 'tiles', 's2')
+    if experiment == 'anthroprotect':
+        csv_file = os.path.join(anthroprotect_data_path, 'infos.csv')
+        data_folder_tiles = os.path.join(anthroprotect_data_path, 'tiles', 's2')
+    elif experiment == 'mapinwild':
+        csv_file = os.path.join(mapinwild_data_path, 'tile_infos/file_infos.csv')
+        data_folder_tiles = os.path.join(mapinwild_data_path, 'tiles')
 
     file_infos = tlearn.data.files.FileInfosGeotif(
         csv_file=csv_file,
@@ -194,8 +200,8 @@ elif experiment == 'asos':
     dataset = datamodule.train_dataset
 
 # define  training parameters
-a_dim = 3 if experiment == 'resnet' else len(channels)
-b_dim = 3 if experiment == 'resnet' else len(channels)
+a_dim = len(channels)
+b_dim = len(channels)
 device = 'cuda'
 learning_rate= 0.0002
 ########################################################################################################
@@ -244,11 +250,11 @@ def train(save_model=False):
             
         for real_A in tqdm_dataloader(dataloader):
 
-            if experiment == 'asos':
+            if experiment in ['anthroprotect', 'mapinwild']:
                 real_A = real_A['x']
             
             # image_width = image.shape[3]
-            if experiment == 'resnet':
+            if experiment == 'horse2zebra':
                 real_A = nn.functional.interpolate(real_A, size=target_shape)
             
              
@@ -337,12 +343,13 @@ def train(save_model=False):
             gen_max_opt.step()
             gen_min_opt.step() # Update optimizer
 
-            wandb.log({
-                'disc_max_loss': disc_max_loss.item(),
-                'disc_min_loss': disc_min_loss.item(),
-                'gen_max_loss': gen_max_loss.item(),
-                'gen_min_loss': gen_min_loss.item(),
-            }, step=cur_step)
+            if run_wandb:
+                wandb.log({
+                    'disc_max_loss': disc_max_loss.item(),
+                    'disc_min_loss': disc_min_loss.item(),
+                    'gen_max_loss': gen_max_loss.item(),
+                    'gen_min_loss': gen_min_loss.item(),
+                }, step=cur_step)
 
 
             ### Visualization code ###
@@ -350,7 +357,7 @@ def train(save_model=False):
                 print(f"Epoch {epoch}: Step {cur_step}: Generator (U-Net) loss: {mean_generator_loss}, Discriminator _a_ loss: {mean_discriminator_loss_a}")
                 
                 
-                if experiment == 'resnet':
+                if experiment == 'horse2zebra':
                 
                     def show_tensor_images(image_tensor, num_images=25, size=(1, 28, 28)):
                         '''
@@ -378,14 +385,15 @@ def train(save_model=False):
                     real_images = show_tensor_images(real_A, size=(dim_A, target_shape, target_shape))
                     real_images.save('real_img_step{cur_step}_epoch{epoch}.jpg')
                     # we are just saving 3 images
-                    print('logging with wandb')
-                    wandb.log({f"maxed{epoch}{cur_step}": wandb.Image('maxed_img_step{cur_step}_epoch{epoch}.jpg')})  
-                    wandb.log({f"mined{epoch}{cur_step}": wandb.Image('mined_img_step{cur_step}_epoch{epoch}.jpg')})  
-                    wandb.log({f"real{epoch}{cur_step}": wandb.Image('real_img_step{cur_step}_epoch{epoch}.jpg')})
+                    if run_wandb:
+                        print('logging with wandb')
+                        wandb.log({f"maxed{epoch}{cur_step}": wandb.Image('maxed_img_step{cur_step}_epoch{epoch}.jpg')})  
+                        wandb.log({f"mined{epoch}{cur_step}": wandb.Image('mined_img_step{cur_step}_epoch{epoch}.jpg')})  
+                        wandb.log({f"real{epoch}{cur_step}": wandb.Image('real_img_step{cur_step}_epoch{epoch}.jpg')})
                         
                         ##################################################
                 
-                elif experiment == 'asos':
+                elif experiment in ['anthroprotect', 'mapinwild']:
 
                     def show_tensor_images(tensor, desc=''):
                         rgb = dataset.get_rgb(tensor[0].cpu())
@@ -402,9 +410,10 @@ def train(save_model=False):
                     show_tensor_images(maxed_x, os.path.join(working_dir, 'images/maxed'))
                     show_tensor_images(mined_x, os.path.join(working_dir, 'images/mined'))
                     
-                    wandb.log({f"maxed{epoch}{cur_step}": wandb.Image(os.path.join(working_dir, f'images/maxed{cur_step}.png'))})  
-                    wandb.log({f"mined{epoch}{cur_step}": wandb.Image(os.path.join(working_dir, f'images/mined{cur_step}.png'))})  
-                    wandb.log({f"real{epoch}{cur_step}": wandb.Image(os.path.join(working_dir, f'images/real{cur_step}.png'))})
+                    if run_wandb:
+                        wandb.log({f"maxed{epoch}{cur_step}": wandb.Image(os.path.join(working_dir, f'images/maxed{cur_step}.png'))})  
+                        wandb.log({f"mined{epoch}{cur_step}": wandb.Image(os.path.join(working_dir, f'images/mined{cur_step}.png'))})  
+                        wandb.log({f"real{epoch}{cur_step}": wandb.Image(os.path.join(working_dir, f'images/real{cur_step}.png'))})
                 
                 mean_generator_loss = 0
                 mean_discriminator_loss_a = 0
