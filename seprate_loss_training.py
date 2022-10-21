@@ -45,7 +45,7 @@ from tqdm import tqdm as tqdm_dataloader
 from unet import UNet
 
 
-run_wandb = True
+run_wandb = False
 
 if run_wandb:
     print('wandb initialization')
@@ -61,17 +61,10 @@ if run_wandb:
 hostname_username = tutils.machine.get_machine_infos()
 print(hostname_username)
 
-<<<<<<< HEAD
 if hostname_username == ('ahmedemam576-Precision-7560', 'ahmedemam576'):  # ahmeds local machine
     working_dir = os.path.expanduser('~/working_dir')
-    asos_model_checkpoint = '/home/ahmedemam576/ahmed_coding_streak/SpacEX/model_state_dict_rgb-channels.pt'
-    asos_data_path = '/home/ahmedemam576/working_folder/data/anthroprotect'
-=======
-if hostname_username == ('?', '?'):  # ahmeds local machine
-    working_dir = '?'
-    anthroprotect_data_path = '?'
-    mapinwild_data_path = '?'
->>>>>>> develop_timo
+    anthroprotect_data_path = '/home/ahmedemam576/working_folder/data/anthroprotect'
+    mapinwild_data_path = os.path.expanduser('~/working_folder/mapinwild')
 
 elif hostname_username == ('ibg2701', '?'):  # ahmeds box
     working_dir = '?'
@@ -103,19 +96,10 @@ if experiment == 'horse2zebra':
     model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1).to('cuda')
     channels = list(range(3))
 
-<<<<<<< HEAD
-elif experiment == 'asos':
-    model = asos_model.Model(
-        in_channels=len(channels), n_unet_maps=3, n_classes=1, unet_base_channels=32, double_conv=False, batch_norm=True,
-        unet_mode='bilinear', unet_activation=nn.Tanh(), final_activation=nn.Sigmoid())
-    model.load_state_dict(torch.load(asos_model_checkpoint))  # ' load the jungle net weights'
-    model.cuda() 
-=======
 elif experiment in ['anthroprotect', 'mapinwild']:
     channels = list(range(3))  # specify accoring to model: if rgb: list(range(3)), if all: list(range(10))
     model = ttorch.model.load_model('./models/asos_mapinwild_rgb-channels.pt', ModelClass=models.asos.Model)
     model.cuda()
->>>>>>> develop_timo
 
 else:
     warnings.warn('Unvalid string for model!')
@@ -141,23 +125,14 @@ adv_norm = nn.MSELoss()
 identity_norm = nn.L1Loss() 
 cycle_norm =nn.L1Loss() 
 
-<<<<<<< HEAD
 n_epochs = 3000
-dim_A = 3 if experiment == 'resnet' else 10
-dim_B = 3 if experiment == 'resnet' else 10
-display_step = 200
-batch_size = 1
-lr = 0.0001
-load_shape = 286 if experiment == 'resnet' else 256
-=======
-n_epochs = 1000
 dim_A = len(channels)
 dim_B = len(channels)
 display_step = 200
 batch_size = 1
-lr = 0.0002
+lr = 0.0001
 load_shape = 286 if experiment == 'horse2zebra' else 256
->>>>>>> develop_timo
+
 target_shape = 256
 device = 'cuda'
 num_workers = 6
