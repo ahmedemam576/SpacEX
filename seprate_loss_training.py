@@ -25,6 +25,7 @@ from torchvision import transforms
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import wandb
 
 # importing the framework's buildng blocks 
@@ -98,7 +99,7 @@ if experiment == 'horse2zebra':
 
 elif experiment in ['anthroprotect', 'mapinwild']:
     channels = list(range(3))  # specify accoring to model: if rgb: list(range(3)), if all: list(range(10))
-    model = ttorch.model.load_model('./models/asos_mapinwild_rgb-channels.pt', ModelClass=models.asos.Model)
+    model = ttorch.model.load_model('./models/asos_mapinwild_rgb-channels.pt', Class=models.asos.Model)
     model.cuda()
 
 else:
@@ -172,16 +173,13 @@ elif experiment in ['anthroprotect', 'mapinwild']:
         csv_file = os.path.join(mapinwild_data_path, 'tile_infos/file_infos.csv')
         data_folder_tiles = os.path.join(mapinwild_data_path, 'tiles')
 
-    file_infos = tlearn.data.files.FileInfosGeotif(
-        csv_file=csv_file,
-        folder=data_folder_tiles,
-    )
-
+    file_infos_df = pd.read_csv(csv_file)
+    
     # only protected areas
-    file_infos.df = file_infos.df[file_infos.df['label'] == 1]
+    file_infos_df = file_infos_df[file_infos_df['label'] == 1]
 
     datamodule = ttorch.data.images.DataModule(
-        file_infos=file_infos.df,
+        file_infos_df=file_infos_df,
         folder=data_folder_tiles,
 
         channels=channels,

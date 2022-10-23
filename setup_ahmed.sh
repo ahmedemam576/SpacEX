@@ -2,7 +2,7 @@ conda deactivate
 conda create --name coding_streak_environment2 python=3.9
 conda activate coding_streak_environment2
 
-pip install git+https://gitlab.jsc.fz-juelich.de/kiste/asos@update
+pip install git+https://gitlab.jsc.fz-juelich.de/kiste/asos@update_2
 
 conda install numpy pandas scikit-learn matplotlib tqdm
 
