@@ -174,9 +174,11 @@ elif experiment in ['anthroprotect', 'mapinwild']:
         data_folder_tiles = os.path.join(mapinwild_data_path, 'tiles')
 
     file_infos_df = pd.read_csv(csv_file)
-    
-    # only protected areas
-    file_infos_df = file_infos_df[file_infos_df['label'] == 1]
+
+    file_infos_df = file_infos_df[file_infos_df['label'] == 1]  # only protected areas
+    if experiment == 'mapinwild':
+        file_infos_df = file_infos_df[file_infos_df['subset'] == True]
+        #file_infos_df = file_infos_df[file_infos_df['season'] == 'summer']
 
     datamodule = ttorch.data.images.DataModule(
         file_infos_df=file_infos_df,

@@ -2,6 +2,41 @@
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
+import pandas as pd
+
+
+class ReplayBuffer:
+    def __init__(self, max_size=50):
+        assert max_size > 0, "Empty buffer or trying to create a black hole. Be careful."
+        self.max_size = max_size
+        self.data = []
+
+    def push_and_pop(self, data):
+        to_return = []
+        for element in data.data:
+            element = torch.unsqueeze(element, 0)
+            if len(self.data) < self.max_size:
+                self.data.append(element)
+                to_return.append(element)
+            else:
+                if random.uniform(0, 1) > 0.5:
+                    i = random.randint(0, self.max_size - 1)
+                    to_return.append(self.data[i].clone())
+                    self.data[i] = element
+                else:
+                    to_return.append(element)
+        return Variable(torch.cat(to_return))
+
+
+class LambdaLR:
+    def __init__(self, n_epochs, offset, decay_start_epoch):
+        assert (n_epochs - decay_start_epoch) > 0, "Decay must start before the training session ends!"
+        self.n_epochs = n_epochs
+        self.offset = offset
+        self.decay_start_epoch = decay_start_epoch
+
+    def step(self, epoch):
+        return 1.0 - max(0, epoch + self.offset - self.decay_start_epoch) / (self.n_epochs - self.decay_start_epoch)
 
 
 def weights_init_normal(m):
@@ -141,7 +176,7 @@ from torch.autograd import Variable
 
 #from models_file import *
 #from datasets import *
-from utils import *
+#from utils import *
 
 import models.asos
 from tlib import tlearn, ttorch, tutils
@@ -181,22 +216,19 @@ from tqdm import tqdm as tqdm_dataloader
 
 channels = list(range(3)) 
 
-asos_data_path = os.path.expanduser('~/datasets/mapinwild')#'/True/s2_summer'
+#asos_data_path = os.path.expanduser('~/datasets/mapinwild')
+asos_data_path = os.path.expanduser('~/data/mapinwild')
 csv_file = os.path.join(asos_data_path, 'tile_infos/file_infos.csv')
 data_folder_tiles = os.path.join(asos_data_path, 'tiles')
-
-file_infos = tlearn.data.files.FileInfosGeotif(
-    csv_file=csv_file,
-    folder=data_folder_tiles,
-)
-file_infos = file_infos.df
 
 def layer_hook(act_dict, layer_name):
     def hook(module, input, output):
         act_dict[layer_name] = output
     return hook
 hook_dict = dict()
-experiment = 'anthroprotect'
+
+
+experiment = 'mapinwild'
 if experiment == 'horse2zebra':
     # Using pretrained weights: we use resnett 50 pretrained classifier trained on imagenet1k dataset
     resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
@@ -206,7 +238,7 @@ if experiment == 'horse2zebra':
 
 elif experiment in ['anthroprotect', 'mapinwild']:
     channels = list(range(3))  # specify accoring to model: if rgb: list(range(3)), if all: list(range(10))
-    model = ttorch.model.load_model('./models/asos_mapinwild_rgb-channels.pt', ModelClass=models.asos.Model)
+    model = ttorch.model.load_model('./models/asos_mapinwild_rgb-channels.pt', Class=models.asos.Model)
     model.cuda()
     
 
@@ -229,17 +261,15 @@ elif experiment in ['anthroprotect', 'mapinwild']:
     model.eval()
 
 
+file_infos_df = pd.read_csv(csv_file)
 
-# only protected areas
-print(len(file_infos))
-file_infos = file_infos[file_infos['label'] == 1]
-print(len(file_infos))
-file_infos = file_infos[file_infos['subset'] == True]
-#file_infos = file_infos[file_infos['season'] == 'summer']
-print(len(file_infos))
+file_infos_df = file_infos_df[file_infos_df['label'] == 1]  # only protected areas
+if experiment == 'mapinwild':
+    file_infos_df = file_infos_df[file_infos_df['subset'] == True]
+    #file_infos_df = file_infos_df[file_infos_df['season'] == 'summer']
 
 datamodule = ttorch.data.images.DataModule(
-    file_infos=file_infos,
+    file_infos_df=file_infos_df,
     folder=data_folder_tiles,
 
     channels=channels,
