@@ -80,7 +80,7 @@ elif hostname_username == ('timodell', 'timo'):  # timos local machine
 elif hostname_username == ('ibg2701', 'tstomberg'):  # timos box
     working_dir = '/data/home/tstomberg/working_dir'
     anthroprotect_data_path = '/data/home/tstomberg/data/anthroprotect'
-    mapinwild_data_path = '?'
+    mapinwild_data_path = '/data/home/aemam/datasets/mapinwild'
 
 else:
     warnings.warn('No settings given for this computer/user!')
@@ -117,7 +117,7 @@ if experiment == 'horse2zebra':
     model.fc.register_forward_hook(layer_hook(hook_dict, 'fc'))
 
 elif experiment in ['anthroprotect', 'mapinwild']:
-    model.classifier[9].register_forward_hook(layer_hook(hook_dict, 9))
+    model.classifier[13].register_forward_hook(layer_hook(hook_dict, 9))
 
 
 
@@ -193,7 +193,6 @@ elif experiment in ['anthroprotect', 'mapinwild']:
 
         use_rasterio=True,
         rgb_channels=[2, 1, 0],
-        val_range=(0, 2**10),
 
         batch_size=batch_size,
         num_workers=num_workers,

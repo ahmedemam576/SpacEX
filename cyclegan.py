@@ -3,6 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 import pandas as pd
+import sys
+import random
 
 
 class ReplayBuffer:
@@ -217,7 +219,7 @@ from tqdm import tqdm as tqdm_dataloader
 channels = list(range(3)) 
 
 #asos_data_path = os.path.expanduser('~/datasets/mapinwild')
-asos_data_path = os.path.expanduser('~/data/mapinwild')
+asos_data_path = '/data/home/aemam/datasets/mapinwild'
 csv_file = os.path.join(asos_data_path, 'tile_infos/file_infos.csv')
 data_folder_tiles = os.path.join(asos_data_path, 'tiles')
 
@@ -257,7 +259,7 @@ if experiment == 'horse2zebra':
     model.fc.register_forward_hook(layer_hook(hook_dict, 'fc'))
 
 elif experiment in ['anthroprotect', 'mapinwild']:
-    model.classifier[9].register_forward_hook(layer_hook(hook_dict, 9))
+    model.classifier[13].register_forward_hook(layer_hook(hook_dict, 9))
     model.eval()
 
 
@@ -281,7 +283,6 @@ datamodule = ttorch.data.images.DataModule(
 
     use_rasterio=True,
     rgb_channels=[2, 1, 0],
-    val_range=(0, 2**10),
 
     batch_size=opt.batch_size,
     num_workers=opt.n_cpu,
@@ -495,7 +496,7 @@ def train_loop():
             #loss_cycle = (loss_cycle_A + loss_cycle_B) / 2
             
             # activation_maximization_loss
-            activation=   hook_dict[9][0][0]
+            activation=   hook_dict[13][0][0]
             print('activation --------------------->', activation.data)
             loss_AM_AB = criterion_identity (activation, torch.ones_like(activation)) # maximzing the wilderness class minimize(output -1)
             loss_AM_BA = criterion_identity (activation, torch.zeros_like(activation)) # maximzing the anthropogenic class minimize(output -0)
