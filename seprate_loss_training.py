@@ -42,6 +42,7 @@ from torchvision.models import resnet50, ResNet50_Weights
 import warnings
 import models.asos
 from tlib import tlearn, ttorch, tutils
+import ttorch_datamodule
 from tqdm import tqdm as tqdm_dataloader
 from unet import UNet
 
@@ -117,7 +118,7 @@ if experiment == 'horse2zebra':
     model.fc.register_forward_hook(layer_hook(hook_dict, 'fc'))
 
 elif experiment in ['anthroprotect', 'mapinwild']:
-    model.classifier[13].register_forward_hook(layer_hook(hook_dict, 9))
+    model.classifier[13].register_forward_hook(layer_hook(hook_dict, 13))
 
 
 
@@ -180,7 +181,7 @@ elif experiment in ['anthroprotect', 'mapinwild']:
         file_infos_df = file_infos_df[file_infos_df['subset'] == True]
         #file_infos_df = file_infos_df[file_infos_df['season'] == 'summer']
 
-    datamodule = ttorch.data.images.DataModule(
+    datamodule = ttorch_datamodule.DataModule(
         file_infos_df=file_infos_df,
         folder=data_folder_tiles,
 

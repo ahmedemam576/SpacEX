@@ -5,6 +5,7 @@ import torch
 import pandas as pd
 import sys
 import random
+import ttorch_datamodule
 
 
 class ReplayBuffer:
@@ -259,7 +260,7 @@ if experiment == 'horse2zebra':
     model.fc.register_forward_hook(layer_hook(hook_dict, 'fc'))
 
 elif experiment in ['anthroprotect', 'mapinwild']:
-    model.classifier[13].register_forward_hook(layer_hook(hook_dict, 9))
+    model.classifier[13].register_forward_hook(layer_hook(hook_dict, 13))
     model.eval()
 
 
@@ -270,7 +271,7 @@ if experiment == 'mapinwild':
     file_infos_df = file_infos_df[file_infos_df['subset'] == True]
     #file_infos_df = file_infos_df[file_infos_df['season'] == 'summer']
 
-datamodule = ttorch.data.images.DataModule(
+datamodule = ttorch_datamodule.DataModule(
     file_infos_df=file_infos_df,
     folder=data_folder_tiles,
 
