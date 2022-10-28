@@ -1,14 +1,67 @@
+import os
 import random
 import warnings
 
 import torch
 import torch.nn.functional as F
 import numpy as np
+import pandas as pd
 
 from tlib import ttorch
 
 
-class DataModule(ttorch.data.images.DataModule):
+class AnthroProtectDataModule(ttorch.data.images.DataModule):
+
+    def __init__(self, csv_file, folder, channels, batch_size, num_workers):
+
+        file_infos_df = pd.read_csv(csv_file)
+        #file_infos_df = file_infos_df[file_infos_df['label'] == 1]  # only protected areas
+
+        super().__init__(
+            file_infos_df=file_infos_df,
+            folder=folder,
+
+            channels=channels,
+            x_normalization=(0, 10000),
+            clip_range=(0, 1),
+            rotate=False,
+            cutmix=None,
+            n_classes=1,
+
+            use_rasterio=True,
+            rgb_channels=[2, 1, 0],
+
+            batch_size=batch_size,
+            num_workers=num_workers,
+        )
+
+
+class MapInWildDataModule(ttorch.data.images.DataModule):
+
+    def __init__(self, csv_file, folder, channels, batch_size, num_workers):
+
+        file_infos_df = pd.read_csv(csv_file)
+        #file_infos_df = file_infos_df[file_infos_df['label'] == 1]  # only protected areas
+        file_infos_df = file_infos_df[file_infos_df['subset'] == True]
+        #file_infos_df = file_infos_df[file_infos_df['season'] == 'summer']
+
+        super().__init__(
+            file_infos_df=file_infos_df,
+            folder=folder,
+
+            channels=channels,
+            x_normalization=(0, 10000),
+            clip_range=(0, 1),
+            rotate=False,
+            cutmix=None,
+            n_classes=1,
+
+            use_rasterio=True,
+            rgb_channels=[2, 1, 0],
+
+            batch_size=batch_size,
+            num_workers=num_workers,
+        )
 
     def transform(self, x, y):
         """

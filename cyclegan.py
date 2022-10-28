@@ -263,31 +263,22 @@ elif experiment in ['anthroprotect', 'mapinwild']:
     model.classifier[13].register_forward_hook(layer_hook(hook_dict, 13))
     model.eval()
 
-
-file_infos_df = pd.read_csv(csv_file)
-
-file_infos_df = file_infos_df[file_infos_df['label'] == 1]  # only protected areas
-if experiment == 'mapinwild':
-    file_infos_df = file_infos_df[file_infos_df['subset'] == True]
-    #file_infos_df = file_infos_df[file_infos_df['season'] == 'summer']
-
-datamodule = ttorch_datamodule.DataModule(
-    file_infos_df=file_infos_df,
-    folder=data_folder_tiles,
-
-    channels=channels,
-    x_normalization=(0, 10000),
-    clip_range=(0, 1),
-    rotate=False,
-    cutmix=None,
-    n_classes=1,
-
-    use_rasterio=True,
-    rgb_channels=[2, 1, 0],
-
-    batch_size=opt.batch_size,
-    num_workers=opt.n_cpu,
-)
+    if experiment == 'anthroprotect':
+        datamodule = ttorch_datamodule.AnthroProtectDataModule(
+            csv_file=csv_file,
+            folder=data_folder_tiles,
+            channels=channels,
+            batch_size=opt.batch_size,
+            num_workers=opt.n_cpu,
+        )
+    elif experiment == 'mapinwild':
+        datamodule = ttorch_datamodule.MapInWildDataModule(
+            csv_file=csv_file,
+            folder=data_folder_tiles,
+            channels=channels,
+            batch_size=opt.batch_size,
+            num_workers=opt.n_cpu,
+        )
 
 dataset = datamodule.train_dataset
 ######

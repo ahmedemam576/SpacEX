@@ -170,34 +170,23 @@ elif experiment in ['anthroprotect', 'mapinwild']:
     if experiment == 'anthroprotect':
         csv_file = os.path.join(anthroprotect_data_path, 'infos.csv')
         data_folder_tiles = os.path.join(anthroprotect_data_path, 'tiles', 's2')
+        datamodule = ttorch_datamodule.AnthroProtectDataModule(
+            csv_file=csv_file,
+            folder=data_folder_tiles,
+            channels=channels,
+            batch_size=batch_size,
+            num_workers=num_workers,
+        )
     elif experiment == 'mapinwild':
         csv_file = os.path.join(mapinwild_data_path, 'tile_infos/file_infos.csv')
         data_folder_tiles = os.path.join(mapinwild_data_path, 'tiles')
-
-    file_infos_df = pd.read_csv(csv_file)
-
-    file_infos_df = file_infos_df[file_infos_df['label'] == 1]  # only protected areas
-    if experiment == 'mapinwild':
-        file_infos_df = file_infos_df[file_infos_df['subset'] == True]
-        #file_infos_df = file_infos_df[file_infos_df['season'] == 'summer']
-
-    datamodule = ttorch_datamodule.DataModule(
-        file_infos_df=file_infos_df,
-        folder=data_folder_tiles,
-
-        channels=channels,
-        x_normalization=(0, 10000),
-        clip_range=(0, 1),
-        rotate=False,
-        cutmix=None,
-        n_classes=1,
-
-        use_rasterio=True,
-        rgb_channels=[2, 1, 0],
-
-        batch_size=batch_size,
-        num_workers=num_workers,
-    )
+        datamodule = ttorch_datamodule.MapInWildDataModule(
+            csv_file=csv_file,
+            folder=data_folder_tiles,
+            channels=channels,
+            batch_size=batch_size,
+            num_workers=num_workers,
+        )
 
     dataset = datamodule.train_dataset
 
