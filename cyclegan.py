@@ -241,7 +241,7 @@ if experiment == 'horse2zebra':
 
 elif experiment in ['anthroprotect', 'mapinwild']:
     channels = list(range(3))  # specify accoring to model: if rgb: list(range(3)), if all: list(range(10))
-    model = ttorch.model.load_model('./models/asos_mapinwild_rgb-channels.pt', Class=models.asos.Model)
+    model = ttorch.model.load_model('./models/asos_mapinwild_rgb-channels_cutmix.pt', Class=models.asos.Model)
     model.cuda()
     
 
