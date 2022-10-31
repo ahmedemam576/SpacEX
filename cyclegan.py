@@ -255,7 +255,6 @@ else:
 
 
 
-experiment = 'mapinwild'
 if experiment == 'horse2zebra':
     model.fc.register_forward_hook(layer_hook(hook_dict, 'fc'))
 
@@ -279,8 +278,6 @@ elif experiment in ['anthroprotect', 'mapinwild']:
             batch_size=opt.batch_size,
             num_workers=opt.n_cpu,
         )
-
-dataset = datamodule.train_dataset
 ######
 
 
@@ -390,17 +387,18 @@ fake_B_buffer = ReplayBuffer()
 ]'''
 
 # Training data loader
+train_dataset = datamodule.train_dataset
 dataloader = DataLoader(
-    dataset,
+    train_dataset,
     #ImageDataset('/home/ahmedemam576/A/*.*', transforms_=transforms_, unaligned=True) ,
     batch_size=3,
-    shuffle=False,
+    shuffle=True,
     num_workers=opt.n_cpu,
 )
 # Test data loader
 val_dataloader = DataLoader(
     #ImageDataset('/home/ahmedemam576/A/*.*', transforms_=transforms_, unaligned=True),
-    dataset,
+    train_dataset,
     batch_size=5,
     shuffle=False,
     num_workers=1,

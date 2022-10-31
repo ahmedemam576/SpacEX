@@ -10,8 +10,16 @@ import pandas as pd
 from tlib import ttorch
 
 
+class AnthroProtectDataset(ttorch.data.images.Dataset):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+
 class AnthroProtectDataModule(ttorch.data.images.DataModule):
 
+    DatasetClass = AnthroProtectDataset
+
     def __init__(self, csv_file, folder, channels, batch_size, num_workers):
 
         file_infos_df = pd.read_csv(csv_file)
@@ -36,32 +44,7 @@ class AnthroProtectDataModule(ttorch.data.images.DataModule):
         )
 
 
-class MapInWildDataModule(ttorch.data.images.DataModule):
-
-    def __init__(self, csv_file, folder, channels, batch_size, num_workers):
-
-        file_infos_df = pd.read_csv(csv_file)
-        #file_infos_df = file_infos_df[file_infos_df['label'] == 1]  # only protected areas
-        file_infos_df = file_infos_df[file_infos_df['subset'] == True]
-        #file_infos_df = file_infos_df[file_infos_df['season'] == 'summer']
-
-        super().__init__(
-            file_infos_df=file_infos_df,
-            folder=folder,
-
-            channels=channels,
-            x_normalization=(0, 10000),
-            clip_range=(0, 1),
-            rotate=False,
-            cutmix=None,
-            n_classes=1,
-
-            use_rasterio=True,
-            rgb_channels=[2, 1, 0],
-
-            batch_size=batch_size,
-            num_workers=num_workers,
-        )
+class MapInWildDataset(ttorch.data.images.Dataset):
 
     def transform(self, x, y):
         """
@@ -79,8 +62,11 @@ class MapInWildDataModule(ttorch.data.images.DataModule):
         # cutmix
         if self.cutmix is not None and random.uniform(0, 1) <= self.cutmix and self.training:  # perform with given probability
 
+            #indices = range(len(self.files))
+            indices = [i for i in range(len(self.files)) if self.labels[i] != y]
+
             # get second item
-            index2 = random.choice(range(len(self.files)))
+            index2 = random.choice(indices)
             batch2 = self.tgetitem(index2)
             x2, y2 = ttorch.utils.get_batch(batch2)
             if self.channels is not None:
@@ -137,3 +123,33 @@ class MapInWildDataModule(ttorch.data.images.DataModule):
                 y = torch.unsqueeze(y, -1).float()
 
         return x, y
+
+
+class MapInWildDataModule(ttorch.data.images.DataModule):
+
+    DatasetClass = MapInWildDataset
+
+    def __init__(self, csv_file, folder, channels, batch_size, num_workers):
+
+        file_infos_df = pd.read_csv(csv_file)
+        #file_infos_df = file_infos_df[file_infos_df['label'] == 1]  # only protected areas
+        file_infos_df = file_infos_df[file_infos_df['subset'] == True]
+        #file_infos_df = file_infos_df[file_infos_df['season'] == 'summer']
+
+        super().__init__(
+            file_infos_df=file_infos_df,
+            folder=folder,
+
+            channels=channels,
+            x_normalization=(0, 10000),
+            clip_range=(0, 1),
+            rotate=False,
+            cutmix=1,
+            n_classes=1,
+
+            use_rasterio=True,
+            rgb_channels=[2, 1, 0],
+
+            batch_size=batch_size,
+            num_workers=num_workers,
+        )
