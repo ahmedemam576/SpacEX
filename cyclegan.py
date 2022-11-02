@@ -2,6 +2,44 @@
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
+import pandas as pd
+import sys
+import random
+import ttorch_datamodule
+
+
+class ReplayBuffer:
+    def __init__(self, max_size=50):
+        assert max_size > 0, "Empty buffer or trying to create a black hole. Be careful."
+        self.max_size = max_size
+        self.data = []
+
+    def push_and_pop(self, data):
+        to_return = []
+        for element in data.data:
+            element = torch.unsqueeze(element, 0)
+            if len(self.data) < self.max_size:
+                self.data.append(element)
+                to_return.append(element)
+            else:
+                if random.uniform(0, 1) > 0.5:
+                    i = random.randint(0, self.max_size - 1)
+                    to_return.append(self.data[i].clone())
+                    self.data[i] = element
+                else:
+                    to_return.append(element)
+        return Variable(torch.cat(to_return))
+
+
+class LambdaLR:
+    def __init__(self, n_epochs, offset, decay_start_epoch):
+        assert (n_epochs - decay_start_epoch) > 0, "Decay must start before the training session ends!"
+        self.n_epochs = n_epochs
+        self.offset = offset
+        self.decay_start_epoch = decay_start_epoch
+
+    def step(self, epoch):
+        return 1.0 - max(0, epoch + self.offset - self.decay_start_epoch) / (self.n_epochs - self.decay_start_epoch)
 
 
 def weights_init_normal(m):
@@ -141,7 +179,7 @@ from torch.autograd import Variable
 
 #from models_file import *
 #from datasets import *
-from utils import *
+#from utils import *
 
 import models.asos
 from tlib import tlearn, ttorch, tutils
@@ -181,22 +219,19 @@ from tqdm import tqdm as tqdm_dataloader
 
 channels = list(range(3)) 
 
-asos_data_path = os.path.expanduser('~/datasets/mapinwild')#'/True/s2_summer'
+#asos_data_path = os.path.expanduser('~/datasets/mapinwild')
+asos_data_path = '/data/home/aemam/datasets/mapinwild'
 csv_file = os.path.join(asos_data_path, 'tile_infos/file_infos.csv')
 data_folder_tiles = os.path.join(asos_data_path, 'tiles')
-
-file_infos = tlearn.data.files.FileInfosGeotif(
-    csv_file=csv_file,
-    folder=data_folder_tiles,
-)
-file_infos = file_infos.df
 
 def layer_hook(act_dict, layer_name):
     def hook(module, input, output):
         act_dict[layer_name] = output
     return hook
 hook_dict = dict()
-experiment = 'anthroprotect'
+
+
+experiment = 'mapinwild'
 if experiment == 'horse2zebra':
     # Using pretrained weights: we use resnett 50 pretrained classifier trained on imagenet1k dataset
     resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
@@ -206,7 +241,7 @@ if experiment == 'horse2zebra':
 
 elif experiment in ['anthroprotect', 'mapinwild']:
     channels = list(range(3))  # specify accoring to model: if rgb: list(range(3)), if all: list(range(10))
-    model = ttorch.model.load_model('./models/asos_mapinwild_rgb-channels.pt', ModelClass=models.asos.Model)
+    model = ttorch.model.load_model('./models/asos_mapinwild_rgb-channels_cutmix.pt', Class=models.asos.Model)
     model.cuda()
     
 
@@ -220,44 +255,29 @@ else:
 
 
 
-experiment = 'mapinwild'
 if experiment == 'horse2zebra':
     model.fc.register_forward_hook(layer_hook(hook_dict, 'fc'))
 
 elif experiment in ['anthroprotect', 'mapinwild']:
-    model.classifier[9].register_forward_hook(layer_hook(hook_dict, 9))
+    model.classifier[13].register_forward_hook(layer_hook(hook_dict, 13))
     model.eval()
 
-
-
-# only protected areas
-print(len(file_infos))
-file_infos = file_infos[file_infos['label'] == 1]
-print(len(file_infos))
-file_infos = file_infos[file_infos['subset'] == True]
-#file_infos = file_infos[file_infos['season'] == 'summer']
-print(len(file_infos))
-
-datamodule = ttorch.data.images.DataModule(
-    file_infos=file_infos,
-    folder=data_folder_tiles,
-
-    channels=channels,
-    x_normalization=(0, 10000),
-    clip_range=(0, 1),
-    rotate=False,
-    cutmix=None,
-    n_classes=1,
-
-    use_rasterio=True,
-    rgb_channels=[2, 1, 0],
-    val_range=(0, 2**10),
-
-    batch_size=opt.batch_size,
-    num_workers=opt.n_cpu,
-)
-
-dataset = datamodule.train_dataset
+    if experiment == 'anthroprotect':
+        datamodule = ttorch_datamodule.AnthroProtectDataModule(
+            csv_file=csv_file,
+            folder=data_folder_tiles,
+            channels=channels,
+            batch_size=opt.batch_size,
+            num_workers=opt.n_cpu,
+        )
+    elif experiment == 'mapinwild':
+        datamodule = ttorch_datamodule.MapInWildDataModule(
+            csv_file=csv_file,
+            folder=data_folder_tiles,
+            channels=channels,
+            batch_size=opt.batch_size,
+            num_workers=opt.n_cpu,
+        )
 ######
 
 
@@ -367,17 +387,18 @@ fake_B_buffer = ReplayBuffer()
 ]'''
 
 # Training data loader
+train_dataset = datamodule.train_dataset
 dataloader = DataLoader(
-    dataset,
+    train_dataset,
     #ImageDataset('/home/ahmedemam576/A/*.*', transforms_=transforms_, unaligned=True) ,
     batch_size=3,
-    shuffle=False,
+    shuffle=True,
     num_workers=opt.n_cpu,
 )
 # Test data loader
 val_dataloader = DataLoader(
     #ImageDataset('/home/ahmedemam576/A/*.*', transforms_=transforms_, unaligned=True),
-    dataset,
+    train_dataset,
     batch_size=5,
     shuffle=False,
     num_workers=1,
@@ -465,7 +486,7 @@ def train_loop():
             #loss_cycle = (loss_cycle_A + loss_cycle_B) / 2
             
             # activation_maximization_loss
-            activation=   hook_dict[9][0][0]
+            activation=   hook_dict[13][0][0]
             print('activation --------------------->', activation.data)
             loss_AM_AB = criterion_identity (activation, torch.ones_like(activation)) # maximzing the wilderness class minimize(output -1)
             loss_AM_BA = criterion_identity (activation, torch.zeros_like(activation)) # maximzing the anthropogenic class minimize(output -0)

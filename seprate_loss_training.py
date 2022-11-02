@@ -25,6 +25,7 @@ from torchvision import transforms
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import wandb
 
 # importing the framework's buildng blocks 
@@ -41,6 +42,7 @@ from torchvision.models import resnet50, ResNet50_Weights
 import warnings
 import models.asos
 from tlib import tlearn, ttorch, tutils
+import ttorch_datamodule
 from tqdm import tqdm as tqdm_dataloader
 from unet import UNet
 
@@ -79,7 +81,7 @@ elif hostname_username == ('timodell', 'timo'):  # timos local machine
 elif hostname_username == ('ibg2701', 'tstomberg'):  # timos box
     working_dir = '/data/home/tstomberg/working_dir'
     anthroprotect_data_path = '/data/home/tstomberg/data/anthroprotect'
-    mapinwild_data_path = '?'
+    mapinwild_data_path = '/data/home/aemam/datasets/mapinwild'
 
 else:
     warnings.warn('No settings given for this computer/user!')
@@ -98,7 +100,7 @@ if experiment == 'horse2zebra':
 
 elif experiment in ['anthroprotect', 'mapinwild']:
     channels = list(range(3))  # specify accoring to model: if rgb: list(range(3)), if all: list(range(10))
-    model = ttorch.model.load_model('./models/asos_mapinwild_rgb-channels.pt', ModelClass=models.asos.Model)
+    model = ttorch.model.load_model('./models/asos_mapinwild_rgb-channels_cutmix.pt', Class=models.asos.Model)
     model.cuda()
 
 else:
@@ -116,7 +118,7 @@ if experiment == 'horse2zebra':
     model.fc.register_forward_hook(layer_hook(hook_dict, 'fc'))
 
 elif experiment in ['anthroprotect', 'mapinwild']:
-    model.classifier[9].register_forward_hook(layer_hook(hook_dict, 9))
+    model.classifier[13].register_forward_hook(layer_hook(hook_dict, 13))
 
 
 
@@ -168,36 +170,23 @@ elif experiment in ['anthroprotect', 'mapinwild']:
     if experiment == 'anthroprotect':
         csv_file = os.path.join(anthroprotect_data_path, 'infos.csv')
         data_folder_tiles = os.path.join(anthroprotect_data_path, 'tiles', 's2')
+        datamodule = ttorch_datamodule.AnthroProtectDataModule(
+            csv_file=csv_file,
+            folder=data_folder_tiles,
+            channels=channels,
+            batch_size=batch_size,
+            num_workers=num_workers,
+        )
     elif experiment == 'mapinwild':
         csv_file = os.path.join(mapinwild_data_path, 'tile_infos/file_infos.csv')
         data_folder_tiles = os.path.join(mapinwild_data_path, 'tiles')
-
-    file_infos = tlearn.data.files.FileInfosGeotif(
-        csv_file=csv_file,
-        folder=data_folder_tiles,
-    )
-
-    # only protected areas
-    file_infos.df = file_infos.df[file_infos.df['label'] == 1]
-
-    datamodule = ttorch.data.images.DataModule(
-        file_infos=file_infos.df,
-        folder=data_folder_tiles,
-
-        channels=channels,
-        x_normalization=(0, 10000),
-        clip_range=(0, 1),
-        rotate=False,
-        cutmix=None,
-        n_classes=1,
-
-        use_rasterio=True,
-        rgb_channels=[2, 1, 0],
-        val_range=(0, 2**10),
-
-        batch_size=batch_size,
-        num_workers=num_workers,
-    )
+        datamodule = ttorch_datamodule.MapInWildDataModule(
+            csv_file=csv_file,
+            folder=data_folder_tiles,
+            channels=channels,
+            batch_size=batch_size,
+            num_workers=num_workers,
+        )
 
     dataset = datamodule.train_dataset
 

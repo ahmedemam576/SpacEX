@@ -2,7 +2,7 @@ conda deactivate
 conda create --name spacex python=3.9
 conda activate spacex
 
-pip install git+https://gitlab.jsc.fz-juelich.de/kiste/asos@update
+pip install git+https://gitlab.jsc.fz-juelich.de/kiste/asos@update_2
 
 conda install numpy pandas scikit-learn matplotlib tqdm
 
