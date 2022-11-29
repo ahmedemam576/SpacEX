@@ -1,25 +1,43 @@
 import os
 
+import torch
 import pandas as pd
+import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 from tlib import ttorch
 import models.asos
 
 
-experiment = 'mapinwild'
-mapinwild_data_path = '/data/home/aemam/datasets/mapinwild'
+# set params
+
+experiment = 'anthroprotect'
+
+if experiment == 'mapinwild':
+    data_path = '/data/home/aemam/datasets/mapinwild'
+    csv_file = os.path.join(data_path, 'tile_infos/file_infos.csv')
+    data_folder_tiles = os.path.join(data_path, 'tiles')
+
+elif experiment == 'anthroprotect':
+    data_path = '/data/home/shared/data/anthroprotect'
+    csv_file = os.path.join(data_path, 'infos.csv')
+    data_folder_tiles = os.path.join(data_path, 'tiles', 's2')
 
 channels = list(range(3))  # specify accoring to model: if rgb: list(range(3)), if all: list(range(10))
-model = ttorch.model.load_model('./models/asos_mapinwild_rgb-channels.pt', Class=models.asos.Model)
-model.cuda()
+model = ttorch.model.load_model('./models/asos_anthroprotect_rgb-channels.pt', Class=models.asos.Model)
 
-csv_file = os.path.join(mapinwild_data_path, 'tile_infos/file_infos.csv')
-data_folder_tiles = os.path.join(mapinwild_data_path, 'tiles')
+
+# setup 
+
+model.eval()
+model.cuda()
 
 file_infos_df = pd.read_csv(csv_file)
 
+if experiment == 'mapinwild':
+    file_infos_df = file_infos_df[file_infos_df['subset'] == True]
+
 file_infos_df = file_infos_df[file_infos_df['label'] == 1]
-file_infos_df = file_infos_df[file_infos_df['subset'] == True]
 
 datamodule = ttorch.data.images.DataModule(
     file_infos_df=file_infos_df,
@@ -41,6 +59,16 @@ datamodule = ttorch.data.images.DataModule(
 
 
 if __name__ == '__main__':
+
+    dataloader = datamodule.get_dataloader('test', shuffle=True)
     
-    for batch in datamodule.test_dataset:
-        print(model(batch['x'].unsqueeze(0)).squeeze().data)
+    with torch.no_grad():
+        
+        for batch in tqdm(dataloader):
+
+            xs, ys, files = batch['x'], batch['y'], batch['file']
+            preds = model(xs)
+
+            for i in range(len(files)):
+                print(files[i].split('/')[-1], '        ', ys[i].item(), '        ', preds[i].item())
+            break
