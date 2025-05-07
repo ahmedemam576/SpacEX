@@ -30,7 +30,7 @@ The proposed framework (illustrated in Figure 1) consists of three phases:
 
 **Figure 2: Generator’s architecture**
 
-![Figure 2](./readme_figures/fig-001.png)
+![Figure 2](./readme_figures/fig-002.png)
 *Caption from paper: Generator’s architecture used in both sub-GANs in the pattern enhancement phase.*
 
 ### Experiments, Results, and Discussions
@@ -52,12 +52,12 @@ The results (Figures 3, 4, and 5) demonstrate that the pattern-maximizer enhance
 
 **Figure 4: Comparison of attribution maps**
 
-![Figure 4](./readme_figures/fig-003.png)
+![Figure 4](./readme_figures/fig-005.png)
 *Caption from paper: Comparison of attribution maps from different explainable machine learning methods. (a) a segmentation mask showing the wetlands pattern in yellow, green representing heavy vegetation, (b) attribution map from DeepLIFT, (c) occlusion sensitivity map, (d) GradCAM, and (e) attribution map from our proposed method...*
 
 **Figure 5: Original input images and corresponding attribution maps**
 
-![Figure 5](./readme_figures/fig-004.jpg)
+![Figure 5](./readme_figures/fig-007.jpg)
 *Caption from paper: (Top row) shows original input images. (Bottom row) shows the corresponding attribution maps produced by our approach.*
 
 *(Note: Additional extracted image elements `fig-005.png` to `fig-008.png` are available in the `readme_figures` directory but are not explicitly referenced as main figures in the paper text.)*
